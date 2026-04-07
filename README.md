@@ -24,4 +24,8 @@ A web app for developing healthy habits. This web app will track your habits and
 Дополнительно:
 
 - `npm run build` — production-сборка в `frontend/dist/`
-- `npm run preview` — локальный просмотр собранной версии
+- `npm run preview` — локальный просмотр собранной версииверсии
+- `npm run preview` — локальный просмотр собранной версииверсии
+- `npm run preview` — локальный просмотр собранной версииверсии
+- `npm run preview` — локальный просмотр собранной версииверсии
+- `npm run preview` — локальный просмотр собранной версииверсии
