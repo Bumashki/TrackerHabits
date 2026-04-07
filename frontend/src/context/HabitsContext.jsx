@@ -1,0 +1,78 @@
+import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import {
+  getHabits,
+  createHabit,
+  updateHabit,
+  deleteHabit,
+  completeHabit,
+  uncompleteHabit,
+} from '../api/habitsApi'
+
+const HabitsContext = createContext(null)
+
+// Провайдер оборачивает всё приложение в App.jsx
+// Все страницы получают данные через useHabits() без повторных запросов
+export function HabitsProvider({ children }) {
+  const [habits, setHabits] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await getHabits()
+      setHabits(data)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  async function create(data) {
+    const newHabit = await createHabit(data)
+    setHabits(prev => [...prev, newHabit])
+    return newHabit
+  }
+
+  async function update(id, data) {
+    const updated = await updateHabit(id, data)
+    setHabits(prev => prev.map(h => h.id === id ? updated : h))
+  }
+
+  async function remove(id) {
+    await deleteHabit(id)
+    setHabits(prev => prev.filter(h => h.id !== id))
+  }
+
+  async function complete(id) {
+    const today = new Date().toISOString().split('T')[0]
+    await completeHabit(id, today)
+    setHabits(prev => prev.map(h =>
+      h.id === id ? { ...h, completedToday: true, streak: h.streak + 1 } : h
+    ))
+  }
+
+  async function uncomplete(id) {
+    const today = new Date().toISOString().split('T')[0]
+    await uncompleteHabit(id, today)
+    setHabits(prev => prev.map(h =>
+      h.id === id ? { ...h, completedToday: false, streak: Math.max(0, h.streak - 1) } : h
+    ))
+  }
+
+  return (
+    <HabitsContext.Provider value={{ habits, loading, error, create, update, remove, complete, uncomplete, reload: load }}>
+      {children}
+    </HabitsContext.Provider>
+  )
+}
+
+export function useHabits() {
+  const ctx = useContext(HabitsContext)
+  if (!ctx) throw new Error('useHabits должен быть внутри HabitsProvider')
+  return ctx
+}

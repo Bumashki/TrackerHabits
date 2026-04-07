@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Habits</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #f7f7f5;
+      --white:    #ffffff;
+      --border:   #e2e2de;
+      --border2:  #d0d0cb;
+      --text:     #1a1a18;
+      --text2:    #6b6b66;
+      --text3:    #a8a8a2;
+      --accent:   #2d6a4f;
+      --accent-bg:#eaf2ed;
+      --danger:   #c0392b;
+      --warn:     #b45309;
+      --warn-bg:  #fef3c7;
+      --r:        6px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* ── Layout ───────────────────────────────── */
+    .shell { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: 220px;
+      background: var(--white);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 20px 0;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+    }
+
+    .brand {
+      padding: 0 18px 20px;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -.2px;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .brand i { color: var(--accent); font-size: 14px; }
+
+    nav { flex: 1; padding: 0 8px; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 10px;
+      border-radius: var(--r);
+      cursor: pointer;
+      font-size: 13.5px;
+      color: var(--text2);
+      background: none;
+      border: none;
+      width: 100%;
+      text-align: left;
+      transition: background .1s, color .1s;
+    }
+    .nav-item:hover { background: var(--bg); color: var(--text); }
+    .nav-item.active { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+    .nav-item i { width: 16px; text-align: center; font-size: 13px; }
+
+    .nav-count {
+      margin-left: auto;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text3);
+    }
+    .nav-item.active .nav-count { color: var(--accent); }
+
+    .sidebar-user {
+      padding: 12px 18px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+    .sidebar-user:hover .user-name { text-decoration: underline; }
+    .ava {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .user-name { font-size: 13px; font-weight: 600; }
+    .user-meta { font-size: 11px; color: var(--text2); }
+
+    /* ── Main ─────────────────────────────────── */
+    .main { margin-left: 220px; flex: 1; }
+
+    .topbar {
+      height: 52px;
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .topbar-left { display: flex; align-items: center; gap: 12px; }
+    .topbar-title { font-size: 14px; font-weight: 600; }
+    .topbar-date { font-size: 12px; color: var(--text2); }
+
+    .page { display: none; padding: 28px; max-width: 900px; }
+    .page.active { display: block; }
+
+    /* ── Buttons ──────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: var(--r);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: background .1s;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .btn-primary:hover { background: #245c43; }
+    .btn-ghost {
+      background: var(--white);
+      color: var(--text);
+      border-color: var(--border);
+    }
+    .btn-ghost:hover { background: var(--bg); }
+    .btn-danger {
+      background: none;
+      color: var(--danger);
+      border-color: transparent;
+    }
+    .btn-danger:hover { background: #fef2f2; }
+    .btn-sm { padding: 4px 9px; font-size: 12px; }
+
+    /* ── Cards / surfaces ─────────────────────── */
+    .card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 12px;
+    }
+
+    /* ── Stats row ────────────────────────────── */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .kpi {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 16px 18px;
+    }
+    .kpi-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+    .kpi-value { font-size: 26px; font-weight: 700; line-height: 1; }
+    .kpi-sub   { font-size: 11px; color: var(--text2); margin-top: 4px; }
+
+    /* ── Today's habit list ───────────────────── */
+    .habit-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .habit-row:last-child { border-bottom: none; }
+
+    .check-box {
+      width: 18px; height: 18px;
+      border: 1.5px solid var(--border2);
+      border-radius: 4px;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      color: transparent;
+      transition: all .1s;
+    }
+    .check-box.done {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .check-box i { font-size: 10px; }
+
+    .habit-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .habit-name { flex: 1; font-size: 13.5px; }
+    .habit-name.done { color: var(--text3); text-decoration: line-through; }
+    .habit-meta { font-size: 12px; color: var(--text3); margin-top: 1px; }
+
+    .streak {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text2);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      min-width: 44px;
+      justify-content: flex-end;
+    }
+    .streak i { font-size: 11px; color: var(--warn); }
+
+    /* ── Progress bar ─────────────────────────── */
+    .prog-wrap { height: 4px; background: var(--bg); border-radius: 2px; margin: 14px 0 16px; }
+    .prog-fill  { height: 100%; background: var(--accent); border-radius: 2px; transition: width .3s; }
+
+    /* ── Two column ───────────────────────────── */
+    .two-col { display: grid; grid-template-columns: 1fr 280px; gap: 16px; }
+
+    /* ── Bar chart ────────────────────────────── */
+    .bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 80px; margin-top: 8px; }
+    .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .bar-col .bar {
+      width: 100%;
+      background: var(--accent);
+      border-radius: 3px 3px 0 0;
+      min-height: 3px;
+    }
+    .bar-col .bar.muted { background: var(--border2); }
+    .bar-col span { font-size: 10px; color: var(--text3); }
+
+    /* ── Calendar (mini) ──────────────────────── */
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 3px;
+    }
+    .cal-dname { font-size: 10px; color: var(--text3); text-align: center; padding-bottom: 3px; }
+    .cal-cell {
+      aspect-ratio: 1;
+      border-radius: 3px;
+      font-size: 11px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+    }
+    .cal-cell:hover { background: var(--bg); }
+    .cal-cell.done    { background: var(--accent); color: #fff; font-weight: 600; }
+    .cal-cell.partial { background: var(--accent-bg); color: var(--accent); }
+    .cal-cell.today   { outline: 1.5px solid var(--accent); font-weight: 700; }
+    .cal-cell.future  { color: var(--text3); }
+    .cal-cell.empty   { visibility: hidden; }
+
+    /* ── Habits list page ─────────────────────── */
+    .habit-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 18px;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+    }
+    .habit-card-icon {
+      width: 36px; height: 36px;
+      border-radius: var(--r);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--accent);
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .habit-card-info { flex: 1; min-width: 0; }
+    .habit-card-name { font-size: 13.5px; font-weight: 600; }
+    .habit-card-sub  { font-size: 12px; color: var(--text2); margin-top: 2px; }
+    .habit-card-bar  { height: 3px; background: var(--bg); border-radius: 2px; margin-top: 7px; }
+    .habit-card-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .tag-green  { background: var(--accent-bg); color: var(--accent); }
+    .tag-warn   { background: var(--warn-bg); color: var(--warn); }
+    .tag-neutral{ background: var(--bg); color: var(--text2); border: 1px solid var(--border); }
+
+    /* ── Stats page ───────────────────────────── */
+    .stat-row-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .stat-row-item:last-child { border-bottom: none; }
+    .stat-row-item .name { flex: 1; }
+    .stat-row-item .pct { font-size: 12px; font-weight: 600; color: var(--text2); min-width: 32px; text-align: right; }
+    .stat-prog { flex: 0 0 120px; height: 4px; background: var(--bg); border-radius: 2px; }
+    .stat-prog-fill { height: 100%; background: var(--accent); border-radius: 2px; }
+
+    /* heatmap */
+    .heatmap { display: grid; grid-template-columns: repeat(13, 1fr); gap: 3px; margin-top: 10px; }
+    .hm { aspect-ratio: 1; border-radius: 2px; background: var(--bg); border: 1px solid var(--border); cursor: pointer; }
+    .hm.l1 { background: #b7d9c8; border-color: #b7d9c8; }
+    .hm.l2 { background: #74b89a; border-color: #74b89a; }
+    .hm.l3 { background: #44916d; border-color: #44916d; }
+    .hm.l4 { background: var(--accent); border-color: var(--accent); }
+
+    /* ── Friends ──────────────────────────────── */
+    .friend-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .friend-row:last-child { border-bottom: none; }
+    .friend-ava {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .friend-info { flex: 1; }
+    .friend-name-row { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+    .online { width: 6px; height: 6px; border-radius: 50%; background: #16a34a; }
+    .offline{ width: 6px; height: 6px; border-radius: 50%; background: var(--border2); }
+    .friend-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+    /* leaderboard */
+    .lb-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 0; border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .lb-row:last-child { border-bottom: none; }
+    .lb-pos { width: 20px; font-size: 12px; font-weight: 700; color: var(--text2); text-align: center; }
+    .lb-score { margin-left: auto; font-weight: 700; font-size: 13px; }
+
+    /* feed */
+    .feed-item {
+      display: flex; gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .feed-item:last-child { border-bottom: none; }
+    .feed-time { font-size: 11px; color: var(--text3); margin-top: 3px; white-space: nowrap; }
+
+    /* ── Profile ──────────────────────────────── */
+    .profile-header {
+      display: flex; align-items: center; gap: 18px;
+      padding: 20px 24px;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      margin-bottom: 20px;
+    }
+    .profile-ava {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: 18px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .profile-name { font-size: 17px; font-weight: 700; }
+    .profile-sub  { font-size: 12px; color: var(--text2); margin-top: 2px; }
+    .profile-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
+    .pstat {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 14px 16px;
+      text-align: center;
+    }
+    .pstat-val { font-size: 22px; font-weight: 700; }
+    .pstat-lbl { font-size: 11px; color: var(--text2); margin-top: 3px; }
+
+    /* ── Form ─────────────────────────────────── */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group.full { grid-column: 1/-1; }
+    .form-label { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; }
+    .form-input, .form-select, .form-textarea {
+      border: 1px solid var(--border2);
+      border-radius: var(--r);
+      padding: 7px 10px;
+      font-size: 13px;
+      outline: none;
+      color: var(--text);
+      background: var(--white);
+      font-family: inherit;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-bg);
+    }
+    .form-textarea { resize: vertical; min-height: 70px; }
+    .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+    .toggle-row { display: flex; gap: 6px; }
+    .day-btn {
+      width: 32px; height: 28px; border-radius: 4px;
+      border: 1px solid var(--border2); background: var(--white);
+      font-size: 11px; font-weight: 600; cursor: pointer;
+      color: var(--text2);
+    }
+    .day-btn.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    /* ── Modal ────────────────────────────────── */
+    .overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.35);
+      z-index: 200; align-items: center; justify-content: center;
+    }
+    .overlay.open { display: flex; }
+    .modal {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 24px;
+      width: 460px; max-width: 94vw;
+      box-shadow: 0 8px 24px rgba(0,0,0,.12);
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .modal-title { font-size: 15px; font-weight: 700; }
+    .modal-close { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 16px; }
+    .modal-close:hover { color: var(--text); }
+
+    /* ── Toggle switch ────────────────────────── */
+    .switch { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0;
+      background: var(--border2);
+      border-radius: 20px; cursor: pointer;
+      transition: background .15s;
+    }
+    .slider::before {
+      content: '';
+      position: absolute;
+      width: 14px; height: 14px;
+      left: 3px; top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform .15s;
+    }
+    .switch input:checked + .slider { background: var(--accent); }
+    .switch input:checked + .slider::before { transform: translateX(16px); }
+
+    .notif-row {
+      display: flex; align-items: center;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+      gap: 12px;
+    }
+    .notif-row:last-child { border-bottom: none; }
+    .notif-row-text { flex: 1; }
+    .notif-row-text b { font-size: 13px; display: block; }
+    .notif-row-text span { font-size: 11px; color: var(--text2); }
+
+    /* ── Badges ───────────────────────────────── */
+    .badge-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
+    .badge-item {
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 14px 10px;
+      text-align: center;
+      background: var(--white);
+    }
+    .badge-item.locked { opacity: .45; }
+    .badge-icon { font-size: 20px; color: var(--accent); margin-bottom: 6px; }
+    .badge-name { font-size: 11px; font-weight: 600; }
+    .badge-sub  { font-size: 10px; color: var(--text2); margin-top: 2px; }
+
+    /* ── Divider ──────────────────────────────── */
+    .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+    hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<div class="shell">
+
+<!-- ══ SIDEBAR ═════════════════════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="brand">
+    <i class="fa-solid fa-leaf"></i>
+    Habits
+  </div>
+
+  <nav>
+    <button class="nav-item active" onclick="show('today', this)">
+      <i class="fa-regular fa-circle-check"></i> Сегодня
+      <span class="nav-count">4/6</span>
+    </button>
+    <button class="nav-item" onclick="show('list', this)">
+      <i class="fa-solid fa-list-ul"></i> Привычки
+      <span class="nav-count">6</span>
+    </button>
+    <button class="nav-item" onclick="show('stats', this)">
+      <i class="fa-solid fa-chart-bar"></i> Статистика
+    </button>
+    <button class="nav-item" onclick="show('friends', this)">
+      <i class="fa-solid fa-users"></i> Друзья
+      <span class="nav-count">3</span>
+    </button>
+    <button class="nav-item" onclick="show('profile', this)">
+      <i class="fa-regular fa-user"></i> Профиль
+    </button>
+  </nav>
+
+  <div class="sidebar-user" onclick="show('profile', document.querySelectorAll('.nav-item')[4])">
+    <div class="ava">АМ</div>
+    <div>
+      <div class="user-name">Анна М.</div>
+      <div class="user-meta"><i class="fa-solid fa-fire" style="color:var(--warn);font-size:10px"></i> 23 дня</div>
+    </div>
+  </div>
+</aside>
+
+<!-- ══ MAIN ════════════════════════════════════════════════════════ -->
+<main class="main">
+
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-title" id="topbarTitle">Сегодня</span>
+      <span class="topbar-date" id="topbarDate"></span>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="openModal()">
+      <i class="fa-solid fa-plus"></i> Новая привычка
+    </button>
+  </div>
+
+  <!-- ── PAGE: TODAY ──────────────────────────────────────────────── -->
+  <div class="page active" id="page-today">
+
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="kpi-label">Серия</div>
+        <div class="kpi-value">23</div>
+        <div class="kpi-sub"><i class="fa-solid fa-fire" style="color:var(--warn)"></i> лучший результат</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Сегодня</div>
+        <div class="kpi-value">4 / 6</div>
+        <div class="kpi-sub">осталось 2</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">За месяц</div>
+        <div class="kpi-value">82%</div>
+        <div class="kpi-sub">+5% к прошлому</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Очки XP</div>
+        <div class="kpi-value">1 240</div>
+        <div class="kpi-sub">+40 сегодня</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+
+      <div class="card">
+        <div style="padding:16px 16px 0;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-weight:600;font-size:14px">Привычки</span>
+          <span style="font-size:12px;color:var(--text2)" id="prog-label">67%</span>
+        </div>
+        <div style="padding:0 16px">
+          <div class="prog-wrap">
+            <div class="prog-fill" id="prog-fill" style="width:67%"></div>
+          </div>
+        </div>
+
+        <div class="habit-row">
+          <div class="check-box done" onclick="toggle(this)"><i class="fa-solid fa-check"></i></div>
+          <div class="habit-dot" style="background:#2d6a4f"></div>
+          <div style="flex:1">
+            <div class="habit-name done" id="hn0">Утренняя медитация</div>
+            <div class="habit-meta">10 мин &middot; каждый день</div>
+          </div>
+          <div class="streak"><i class="fa-solid fa-fire"></i> 23</div>
+        </div>
+
+        <div class="habit-row">
+          <div class="check-box done" onclick="toggle(this)"><i class="fa-solid fa-check"></i></div>
+          <div class="habit-dot" style="background:#1d6fa3"></div>
+          <div style="flex:1">
+            <div class="habit-name done" id="hn1">Пробежка</div>
+            <div class="habit-meta">30 мин &middot; пн, ср, пт, сб</div>
+          </div>
+          <div class="streak"><i class="fa-solid fa-fire"></i> 11</div>
+        </div>
+
+        <div class="habit-row">
+          <div class="check-box done" onclick="toggle(this)"><i class="fa-solid fa-check"></i></div>
+          <div class="habit-dot" style="background:#7a3ea0"></div>
+          <div style="flex:1">
+            <div class="habit-name done" id="hn2">Чтение книги</div>
+            <div class="habit-meta">20 стр &middot; каждый день</div>
+          </div>
+          <div class="streak"><i class="fa-solid fa-fire"></i> 7</div>
+        </div>
+
+        <div class="habit-row">
+          <div class="check-box done" onclick="toggle(this)"><i class="fa-solid fa-check"></i></div>
+          <div class="habit-dot" style="background:#b45309"></div>
+          <div style="flex:1">
+            <div class="habit-name done" id="hn3">Выпить 2 л воды</div>
+            <div class="habit-meta">каждый день</div>
+          </div>
+          <div class="streak"><i class="fa-solid fa-fire"></i> 5</div>
+        </div>
+
+        <div class="habit-row">
+          <div class="check-box" onclick="toggle(this)"><i class="fa-solid fa-check"></i></div>
+          <div class="habit-dot" style="background:#c0392b"></div>
+          <div style="flex:1">
+            <div class="habit-name" id="hn4">Игра на гитаре</div>
+            <div class="habit-meta">15 мин &middot; каждый день</div>
+          </div>
+          <div class="streak" style="color:var(--text3)">— 0</div>
+        </div>
+
+        <div class="habit-row">
+          <div class="check-box" onclick="toggle(this)"><i class="fa-solid fa-check"></i></div>
+          <div class="habit-dot" style="background:#6b6b66"></div>
+          <div style="flex:1">
+            <div class="habit-name" id="hn5">Дневник</div>
+            <div class="habit-meta">5 мин &middot; каждый день</div>
+          </div>
+          <div class="streak" style="color:var(--text3)">— 0</div>
+        </div>
+      </div>
+
+      <!-- Right panel -->
+      <div style="display:flex;flex-direction:column;gap:16px">
+
+        <!-- Mini calendar -->
+        <div class="card" style="padding:16px">
+          <div class="section-title">Апрель 2026</div>
+          <div class="cal-grid" id="miniCal"></div>
+        </div>
+
+        <!-- Week bars -->
+        <div class="card" style="padding:16px">
+          <div class="section-title">Эта неделя</div>
+          <div class="bar-chart">
+            <div class="bar-col"><div class="bar" style="height:72%"></div><span>Пн</span></div>
+            <div class="bar-col"><div class="bar" style="height:50%"></div><span>Вт</span></div>
+            <div class="bar-col"><div class="bar" style="height:85%"></div><span>Ср</span></div>
+            <div class="bar-col"><div class="bar" style="height:60%"></div><span>Чт</span></div>
+            <div class="bar-col"><div class="bar" style="height:95%"></div><span>Пт</span></div>
+            <div class="bar-col"><div class="bar" style="height:33%"></div><span>Сб</span></div>
+            <div class="bar-col"><div class="bar muted" style="height:67%"></div><span style="color:var(--accent);font-weight:600">Вс</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAGE: LIST ───────────────────────────────────────────────── -->
+  <div class="page" id="page-list">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div>
+        <div style="font-size:15px;font-weight:700">Все привычки</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px">6 активных</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openModal()">
+        <i class="fa-solid fa-plus"></i> Создать
+      </button>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px">
+
+      <div class="habit-card">
+        <div class="habit-card-icon"><i class="fa-solid fa-spa"></i></div>
+        <div class="habit-card-info">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="habit-card-name">Утренняя медитация</span>
+            <span class="tag tag-green">активна</span>
+          </div>
+          <div class="habit-card-sub">10 мин &middot; каждый день &middot; 06:00</div>
+          <div class="habit-card-bar"><div class="habit-card-bar-fill" style="width:96%"></div></div>
+        </div>
+        <div style="text-align:right;min-width:50px">
+          <div style="font-weight:700;font-size:13px"><i class="fa-solid fa-fire" style="color:var(--warn)"></i> 23</div>
+          <div style="font-size:10px;color:var(--text2)">серия</div>
+        </div>
+        <div style="display:flex;gap:6px;margin-left:8px">
+          <button class="btn btn-ghost btn-sm" onclick="openModal()"><i class="fa-regular fa-pen-to-square"></i></button>
+          <button class="btn btn-danger btn-sm"><i class="fa-regular fa-trash-can"></i></button>
+        </div>
+      </div>
+
+      <div class="habit-card">
+        <div class="habit-card-icon" style="color:#1d6fa3"><i class="fa-solid fa-person-running"></i></div>
+        <div class="habit-card-info">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="habit-card-name">Пробежка</span>
+            <span class="tag tag-green">активна</span>
+          </div>
+          <div class="habit-card-sub">30 мин &middot; пн, ср, пт, сб</div>
+          <div class="habit-card-bar"><div class="habit-card-bar-fill" style="width:78%;background:#1d6fa3"></div></div>
+        </div>
+        <div style="text-align:right;min-width:50px">
+          <div style="font-weight:700;font-size:13px"><i class="fa-solid fa-fire" style="color:var(--warn)"></i> 11</div>
+          <div style="font-size:10px;color:var(--text2)">серия</div>
+        </div>
+        <div style="display:flex;gap:6px;margin-left:8px">
+          <button class="btn btn-ghost btn-sm" onclick="openModal()"><i class="fa-regular fa-pen-to-square"></i></button>
+          <button class="btn btn-danger btn-sm"><i class="fa-regular fa-trash-can"></i></button>
+        </div>
+      </div>
+
+      <div class="habit-card">
+        <div class="habit-card-icon" style="color:#7a3ea0"><i class="fa-solid fa-book-open"></i></div>
+        <div class="habit-card-info">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="habit-card-name">Чтение книги</span>
+            <span class="tag tag-green">активна</span>
+          </div>
+          <div class="habit-card-sub">20 стр &middot; каждый день &middot; 21:00</div>
+          <div class="habit-card-bar"><div class="habit-card-bar-fill" style="width:65%;background:#7a3ea0"></div></div>
+        </div>
+        <div style="text-align:right;min-width:50px">
+          <div style="font-weight:700;font-size:13px"><i class="fa-solid fa-fire" style="color:var(--warn)"></i> 7</div>
+          <div style="font-size:10px;color:var(--text2)">серия</div>
+        </div>
+        <div style="display:flex;gap:6px;margin-left:8px">
+          <button class="btn btn-ghost btn-sm" onclick="openModal()"><i class="fa-regular fa-pen-to-square"></i></button>
+          <button class="btn btn-danger btn-sm"><i class="fa-regular fa-trash-can"></i></button>
+        </div>
+      </div>
+
+      <div class="habit-card">
+        <div class="habit-card-icon" style="color:#b45309"><i class="fa-solid fa-droplet"></i></div>
+        <div class="habit-card-info">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="habit-card-name">Выпить 2 л воды</span>
+            <span class="tag tag-green">активна</span>
+          </div>
+          <div class="habit-card-sub">2000 мл &middot; каждый день</div>
+          <div class="habit-card-bar"><div class="habit-card-bar-fill" style="width:55%;background:#b45309"></div></div>
+        </div>
+        <div style="text-align:right;min-width:50px">
+          <div style="font-weight:700;font-size:13px"><i class="fa-solid fa-fire" style="color:var(--warn)"></i> 5</div>
+          <div style="font-size:10px;color:var(--text2)">серия</div>
+        </div>
+        <div style="display:flex;gap:6px;margin-left:8px">
+          <button class="btn btn-ghost btn-sm" onclick="openModal()"><i class="fa-regular fa-pen-to-square"></i></button>
+          <button class="btn btn-danger btn-sm"><i class="fa-regular fa-trash-can"></i></button>
+        </div>
+      </div>
+
+      <div class="habit-card">
+        <div class="habit-card-icon" style="color:#c0392b"><i class="fa-solid fa-guitar"></i></div>
+        <div class="habit-card-info">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="habit-card-name">Игра на гитаре</span>
+            <span class="tag tag-warn">новая</span>
+          </div>
+          <div class="habit-card-sub">15 мин &middot; каждый день &middot; 19:00</div>
+          <div class="habit-card-bar"><div class="habit-card-bar-fill" style="width:18%;background:#c0392b"></div></div>
+        </div>
+        <div style="text-align:right;min-width:50px">
+          <div style="font-weight:700;font-size:13px;color:var(--text3)">— 0</div>
+          <div style="font-size:10px;color:var(--text2)">серия</div>
+        </div>
+        <div style="display:flex;gap:6px;margin-left:8px">
+          <button class="btn btn-ghost btn-sm" onclick="openModal()"><i class="fa-regular fa-pen-to-square"></i></button>
+          <button class="btn btn-danger btn-sm"><i class="fa-regular fa-trash-can"></i></button>
+        </div>
+      </div>
+
+      <div class="habit-card">
+        <div class="habit-card-icon" style="color:#6b6b66"><i class="fa-regular fa-note-sticky"></i></div>
+        <div class="habit-card-info">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="habit-card-name">Дневник</span>
+            <span class="tag tag-neutral">пауза</span>
+          </div>
+          <div class="habit-card-sub">5 мин &middot; каждый день &middot; 22:00</div>
+          <div class="habit-card-bar"><div class="habit-card-bar-fill" style="width:40%;background:#6b6b66"></div></div>
+        </div>
+        <div style="text-align:right;min-width:50px">
+          <div style="font-weight:700;font-size:13px;color:var(--text3)">— 0</div>
+          <div style="font-size:10px;color:var(--text2)">серия</div>
+        </div>
+        <div style="display:flex;gap:6px;margin-left:8px">
+          <button class="btn btn-ghost btn-sm" onclick="openModal()"><i class="fa-regular fa-pen-to-square"></i></button>
+          <button class="btn btn-danger btn-sm"><i class="fa-regular fa-trash-can"></i></button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── PAGE: STATS ──────────────────────────────────────────────── -->
+  <div class="page" id="page-stats">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div style="font-size:15px;font-weight:700">Статистика</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm">Неделя</button>
+        <button class="btn btn-primary btn-sm">Месяц</button>
+        <button class="btn btn-ghost btn-sm">Год</button>
+      </div>
+    </div>
+
+    <div class="kpi-row" style="margin-bottom:20px">
+      <div class="kpi">
+        <div class="kpi-label">Лучшая серия</div>
+        <div class="kpi-value">23</div>
+        <div class="kpi-sub">Медитация</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Среднее/день</div>
+        <div class="kpi-value">4.8</div>
+        <div class="kpi-sub">+0.3 к прошлому мес.</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Успешность</div>
+        <div class="kpi-value">82%</div>
+        <div class="kpi-sub">+5%</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Идеальных дней</div>
+        <div class="kpi-value">8</div>
+        <div class="kpi-sub">из 31</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+      <div class="card" style="padding:16px">
+        <div class="section-title">По привычкам — апрель</div>
+
+        <div class="stat-row-item">
+          <i class="fa-solid fa-spa" style="color:#2d6a4f;width:14px"></i>
+          <span class="name">Медитация</span>
+          <div class="stat-prog"><div class="stat-prog-fill" style="width:96%"></div></div>
+          <span class="pct">96%</span>
+        </div>
+        <div class="stat-row-item">
+          <i class="fa-solid fa-person-running" style="color:#1d6fa3;width:14px"></i>
+          <span class="name">Пробежка</span>
+          <div class="stat-prog"><div class="stat-prog-fill" style="width:88%;background:#1d6fa3"></div></div>
+          <span class="pct">88%</span>
+        </div>
+        <div class="stat-row-item">
+          <i class="fa-solid fa-book-open" style="color:#7a3ea0;width:14px"></i>
+          <span class="name">Чтение</span>
+          <div class="stat-prog"><div class="stat-prog-fill" style="width:82%;background:#7a3ea0"></div></div>
+          <span class="pct">82%</span>
+        </div>
+        <div class="stat-row-item">
+          <i class="fa-solid fa-droplet" style="color:#b45309;width:14px"></i>
+          <span class="name">Вода</span>
+          <div class="stat-prog"><div class="stat-prog-fill" style="width:75%;background:#b45309"></div></div>
+          <span class="pct">75%</span>
+        </div>
+        <div class="stat-row-item">
+          <i class="fa-solid fa-guitar" style="color:#c0392b;width:14px"></i>
+          <span class="name">Гитара</span>
+          <div class="stat-prog"><div class="stat-prog-fill" style="width:32%;background:#c0392b"></div></div>
+          <span class="pct">32%</span>
+        </div>
+        <div class="stat-row-item">
+          <i class="fa-regular fa-note-sticky" style="color:#6b6b66;width:14px"></i>
+          <span class="name">Дневник</span>
+          <div class="stat-prog"><div class="stat-prog-fill" style="width:58%;background:#6b6b66"></div></div>
+          <span class="pct">58%</span>
+        </div>
+      </div>
+
+      <div class="card" style="padding:16px">
+        <div class="section-title">По месяцам — 2026</div>
+        <div class="bar-chart" style="height:120px">
+          <div class="bar-col"><div class="bar" style="height:65%"></div><span>Янв</span></div>
+          <div class="bar-col"><div class="bar" style="height:78%"></div><span>Фев</span></div>
+          <div class="bar-col"><div class="bar" style="height:70%"></div><span>Мар</span></div>
+          <div class="bar-col"><div class="bar" style="height:85%"></div><span>Апр</span></div>
+          <div class="bar-col"><div class="bar muted" style="height:50%"></div><span>Май</span></div>
+          <div class="bar-col"><div class="bar muted" style="height:50%"></div><span>Июн</span></div>
+          <div class="bar-col"><div class="bar muted" style="height:50%"></div><span>Июл</span></div>
+          <div class="bar-col"><div class="bar muted" style="height:50%"></div><span>Авг</span></div>
+          <div class="bar-col"><div class="bar muted" style="height:50%"></div><span>Сен</span></div>
+          <div class="bar-col"><div class="bar muted" style="height:50%"></div><span>Окт</span></div>
+          <div class="bar-col"><div class="bar muted" style="height:50%"></div><span>Ноя</span></div>
+          <div class="bar-col"><div class="bar muted" style="height:50%"></div><span>Дек</span></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="card" style="padding:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div class="section-title" style="margin-bottom:0">Карта активности — 2026</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)">
+          нет
+          <div class="hm"></div>
+          <div class="hm l1"></div>
+          <div class="hm l2"></div>
+          <div class="hm l3"></div>
+          <div class="hm l4"></div>
+          много
+        </div>
+      </div>
+      <div class="heatmap" id="heatmap"></div>
+    </div>
+
+    <div class="card" style="padding:16px;margin-top:16px">
+      <div class="section-title">Апрель 2026 — календарь</div>
+      <div class="cal-grid" style="gap:5px">
+        <div class="cal-dname">Пн</div><div class="cal-dname">Вт</div>
+        <div class="cal-dname">Ср</div><div class="cal-dname">Чт</div>
+        <div class="cal-dname">Пт</div><div class="cal-dname">Сб</div>
+        <div class="cal-dname">Вс</div>
+      </div>
+      <div class="cal-grid" id="bigCal" style="gap:5px;margin-top:2px"></div>
+    </div>
+
+  </div>
+
+  <!-- ── PAGE: FRIENDS ────────────────────────────────────────────── -->
+  <div class="page" id="page-friends">
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div style="font-size:15px;font-weight:700">Друзья</div>
+      <button class="btn btn-primary btn-sm">
+        <i class="fa-solid fa-user-plus"></i> Пригласить
+      </button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 260px;gap:16px;align-items:start">
+
+      <div style="display:flex;flex-direction:column;gap:16px">
+
+        <div class="card" style="padding:16px">
+          <div class="section-title">Список друзей</div>
+
+          <div class="friend-row">
+            <div class="friend-ava" style="background:#2d6a4f">КС</div>
+            <div class="friend-info">
+              <div class="friend-name-row">
+                Катя С. <div class="online"></div>
+                <span style="font-size:11px;color:#16a34a;font-weight:400">онлайн</span>
+              </div>
+              <div class="friend-sub"><i class="fa-solid fa-fire" style="color:var(--warn)"></i> 18 дней &middot; 5/6 сегодня</div>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-ghost btn-sm"><i class="fa-regular fa-thumbs-up"></i> Похвалить</button>
+              <button class="btn btn-ghost btn-sm"><i class="fa-regular fa-comment"></i></button>
+            </div>
+          </div>
+
+          <div class="friend-row">
+            <div class="friend-ava" style="background:#1d6fa3">МВ</div>
+            <div class="friend-info">
+              <div class="friend-name-row">
+                Миша В. <div class="online"></div>
+                <span style="font-size:11px;color:#16a34a;font-weight:400">онлайн</span>
+              </div>
+              <div class="friend-sub"><i class="fa-solid fa-fire" style="color:var(--warn)"></i> 31 день &middot; 6/6 сегодня</div>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-ghost btn-sm"><i class="fa-regular fa-thumbs-up"></i> Похвалить</button>
+              <button class="btn btn-ghost btn-sm"><i class="fa-regular fa-comment"></i></button>
+            </div>
+          </div>
+
+          <div class="friend-row">
+            <div class="friend-ava" style="background:#b45309">ОА</div>
+            <div class="friend-info">
+              <div class="friend-name-row">
+                Оля А. <div class="offline"></div>
+                <span style="font-size:11px;color:var(--text2);font-weight:400">2 ч назад</span>
+              </div>
+              <div class="friend-sub"><i class="fa-solid fa-fire" style="color:var(--warn)"></i> 9 дней &middot; 3/4 сегодня</div>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-ghost btn-sm"><i class="fa-regular fa-thumbs-up"></i> Похвалить</button>
+              <button class="btn btn-ghost btn-sm"><i class="fa-regular fa-comment"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="padding:16px">
+          <div class="section-title">Лента активности</div>
+
+          <div class="feed-item">
+            <div class="friend-ava" style="background:#1d6fa3;width:28px;height:28px;font-size:10px;flex-shrink:0">МВ</div>
+            <div style="flex:1">
+              <div><b>Миша В.</b> выполнил все 6 привычек</div>
+              <div class="feed-time">5 мин назад &middot; <i class="fa-solid fa-fire" style="color:var(--warn)"></i> 31 день</div>
+            </div>
+          </div>
+
+          <div class="feed-item">
+            <div class="friend-ava" style="background:#2d6a4f;width:28px;height:28px;font-size:10px;flex-shrink:0">КС</div>
+            <div style="flex:1">
+              <div><b>Катя С.</b> установила рекорд серии — 18 дней</div>
+              <div class="feed-time">1 час назад</div>
+            </div>
+          </div>
+
+          <div class="feed-item">
+            <div class="friend-ava" style="background:#b45309;width:28px;height:28px;font-size:10px;flex-shrink:0">ОА</div>
+            <div style="flex:1">
+              <div><b>Оля А.</b> добавила привычку «Йога»</div>
+              <div class="feed-time">2 часа назад</div>
+            </div>
+          </div>
+
+          <div class="feed-item">
+            <div class="ava" style="width:28px;height:28px;font-size:10px;flex-shrink:0">АМ</div>
+            <div style="flex:1">
+              <div><b>Вы</b> выполнили 4 привычки</div>
+              <div class="feed-time">Сегодня &middot; <i class="fa-solid fa-fire" style="color:var(--warn)"></i> 23 дня</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Leaderboard -->
+      <div class="card" style="padding:16px">
+        <div class="section-title">Рейтинг недели</div>
+
+        <div class="lb-row">
+          <span class="lb-pos" style="color:#b45309">1</span>
+          <div class="friend-ava" style="background:#1d6fa3;width:28px;height:28px;font-size:10px">МВ</div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600">Миша В.</div>
+            <div style="font-size:11px;color:var(--text2)">6/6 сегодня</div>
+          </div>
+          <span class="lb-score">42</span>
+        </div>
+
+        <div class="lb-row" style="background:var(--accent-bg);border-radius:4px;padding:8px 4px">
+          <span class="lb-pos" style="color:var(--text2)">2</span>
+          <div class="ava" style="width:28px;height:28px;font-size:10px">АМ</div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600">Анна М. <span style="font-size:11px;color:var(--accent);font-weight:400">(вы)</span></div>
+            <div style="font-size:11px;color:var(--text2)">4/6 сегодня</div>
+          </div>
+          <span class="lb-score" style="color:var(--accent)">38</span>
+        </div>
+
+        <div class="lb-row">
+          <span class="lb-pos" style="color:var(--text2)">3</span>
+          <div class="friend-ava" style="background:#2d6a4f;width:28px;height:28px;font-size:10px">КС</div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600">Катя С.</div>
+            <div style="font-size:11px;color:var(--text2)">5/6 сегодня</div>
+          </div>
+          <span class="lb-score">35</span>
+        </div>
+
+        <div class="lb-row">
+          <span class="lb-pos" style="color:var(--text2)">4</span>
+          <div class="friend-ava" style="background:#b45309;width:28px;height:28px;font-size:10px">ОА</div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600">Оля А.</div>
+            <div style="font-size:11px;color:var(--text2)">3/4 сегодня</div>
+          </div>
+          <span class="lb-score">22</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── PAGE: PROFILE ────────────────────────────────────────────── -->
+  <div class="page" id="page-profile">
+
+    <div class="profile-header">
+      <div class="profile-ava">АМ</div>
+      <div>
+        <div class="profile-name">Анна Михайлова</div>
+        <div class="profile-sub">anna.m@email.com &middot; в Habits с января 2026</div>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+          <span class="tag tag-green"><i class="fa-solid fa-fire"></i> Серия 23+</span>
+          <span class="tag tag-neutral"><i class="fa-solid fa-person-running"></i> 100 пробежек</span>
+          <span class="tag tag-neutral"><i class="fa-solid fa-book-open"></i> Читатель</span>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="margin-left:auto;align-self:flex-start">
+        <i class="fa-regular fa-pen-to-square"></i> Изменить
+      </button>
+    </div>
+
+    <div class="profile-stats">
+      <div class="pstat">
+        <div class="pstat-val">23</div>
+        <div class="pstat-lbl"><i class="fa-solid fa-fire" style="color:var(--warn)"></i> Текущая серия</div>
+      </div>
+      <div class="pstat">
+        <div class="pstat-val">31</div>
+        <div class="pstat-lbl">Лучшая серия</div>
+      </div>
+      <div class="pstat">
+        <div class="pstat-val">1 240</div>
+        <div class="pstat-lbl">Очки XP</div>
+      </div>
+      <div class="pstat">
+        <div class="pstat-val">82%</div>
+        <div class="pstat-lbl">Успешность</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+      <div class="card" style="padding:20px">
+        <div class="section-title">Настройки</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Имя</label>
+            <input class="form-input" type="text" value="Анна Михайлова" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Никнейм</label>
+            <input class="form-input" type="text" value="@anna.m" />
+          </div>
+          <div class="form-group full">
+            <label class="form-label">Email</label>
+            <input class="form-input" type="email" value="anna.m@email.com" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Часовой пояс</label>
+            <select class="form-select">
+              <option>UTC+3 (Москва)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Язык</label>
+            <select class="form-select">
+              <option>Русский</option>
+              <option>English</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-ghost btn-sm">Отмена</button>
+          <button class="btn btn-primary btn-sm">Сохранить</button>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px">
+
+        <div class="card" style="padding:16px">
+          <div class="section-title">Уведомления</div>
+          <div class="notif-row">
+            <div class="notif-row-text">
+              <b>Ежедневное напоминание</b>
+              <span>09:00 каждый день</span>
+            </div>
+            <label class="switch"><input type="checkbox" checked /><span class="slider"></span></label>
+          </div>
+          <div class="notif-row">
+            <div class="notif-row-text">
+              <b>Активность друзей</b>
+              <span>Когда друзья выполняют цели</span>
+            </div>
+            <label class="switch"><input type="checkbox" checked /><span class="slider"></span></label>
+          </div>
+          <div class="notif-row">
+            <div class="notif-row-text">
+              <b>Угроза серии</b>
+              <span>Если день не отмечен к 21:00</span>
+            </div>
+            <label class="switch"><input type="checkbox" /><span class="slider"></span></label>
+          </div>
+        </div>
+
+        <div class="card" style="padding:16px">
+          <div class="section-title">Достижения</div>
+          <div class="badge-grid">
+            <div class="badge-item">
+              <div class="badge-icon"><i class="fa-solid fa-fire"></i></div>
+              <div class="badge-name">Серия 30+</div>
+              <div class="badge-sub">получено</div>
+            </div>
+            <div class="badge-item">
+              <div class="badge-icon"><i class="fa-solid fa-person-running"></i></div>
+              <div class="badge-name">100 пробежек</div>
+              <div class="badge-sub">получено</div>
+            </div>
+            <div class="badge-item">
+              <div class="badge-icon"><i class="fa-solid fa-book-open"></i></div>
+              <div class="badge-name">50 книг</div>
+              <div class="badge-sub">получено</div>
+            </div>
+            <div class="badge-item locked">
+              <div class="badge-icon"><i class="fa-solid fa-star"></i></div>
+              <div class="badge-name">Идеал. месяц</div>
+              <div class="badge-sub">не получено</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<!-- ══ MODAL ════════════════════════════════════════════════════════ -->
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Новая привычка</span>
+      <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-group full">
+        <label class="form-label">Название</label>
+        <input class="form-input" type="text" placeholder="Например: утренняя зарядка" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Иконка</label>
+        <select class="form-select">
+          <option>Медитация</option>
+          <option>Спорт</option>
+          <option>Чтение</option>
+          <option>Вода</option>
+          <option>Музыка</option>
+          <option>Письмо</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Категория</label>
+        <select class="form-select">
+          <option>Здоровье</option>
+          <option>Спорт</option>
+          <option>Саморазвитие</option>
+          <option>Творчество</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Дни недели</label>
+        <div class="toggle-row">
+          <button class="day-btn on">Пн</button>
+          <button class="day-btn on">Вт</button>
+          <button class="day-btn on">Ср</button>
+          <button class="day-btn on">Чт</button>
+          <button class="day-btn on">Пт</button>
+          <button class="day-btn">Сб</button>
+          <button class="day-btn">Вс</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Напоминание</label>
+        <input class="form-input" type="time" value="08:00" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Цель (необязательно)</label>
+        <input class="form-input" type="text" placeholder="20 мин, 2 л, 20 стр..." />
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Описание</label>
+        <textarea class="form-textarea" placeholder="Зачем вам эта привычка?"></textarea>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-primary btn-sm" onclick="closeModal()">
+        <i class="fa-solid fa-plus"></i> Создать
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* Date */
+  const RU_DAYS = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
+  const RU_MON  = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  const now = new Date();
+  document.getElementById('topbarDate').textContent =
+    RU_DAYS[now.getDay()] + ', ' + now.getDate() + ' ' + RU_MON[now.getMonth()] + ' ' + now.getFullYear();
+
+  /* Nav */
+  const TITLES = { today:'Сегодня', list:'Привычки', stats:'Статистика', friends:'Друзья', profile:'Профиль' };
+  function show(id, el) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('page-' + id).classList.add('active');
+    if (el) el.classList.add('active');
+    document.getElementById('topbarTitle').textContent = TITLES[id] || id;
+  }
+
+  /* Checkboxes */
+  function toggle(el) {
+    el.classList.toggle('done');
+    const nameEl = el.closest('.habit-row').querySelector('.habit-name');
+    nameEl.classList.toggle('done', el.classList.contains('done'));
+    recalc();
+  }
+  function recalc() {
+    const all  = document.querySelectorAll('#page-today .check-box');
+    const done = [...all].filter(c => c.classList.contains('done')).length;
+    const pct  = Math.round(done / all.length * 100);
+    document.getElementById('prog-fill').style.width = pct + '%';
+    document.getElementById('prog-label').textContent = pct + '%';
+    document.querySelector('.nav-item:first-child .nav-count').textContent = done + '/' + all.length;
+  }
+
+  /* Modal */
+  function openModal()  { document.getElementById('overlay').classList.add('open'); }
+  function closeModal() { document.getElementById('overlay').classList.remove('open'); }
+  document.querySelectorAll('.day-btn').forEach(b => b.addEventListener('click', () => b.classList.toggle('on')));
+
+  /* Mini calendar */
+  (function() {
+    const grid = document.getElementById('miniCal');
+    const names = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+    names.forEach(n => { const d = document.createElement('div'); d.className='cal-dname'; d.textContent=n; grid.appendChild(d); });
+    const firstDay = 2; // April 1 2026 = Wednesday, 0=Mon => index 2
+    const done = [1,2,3,5,6,7];
+    const partial = [4];
+    for (let i = 0; i < firstDay; i++) {
+      const c = document.createElement('div'); c.className='cal-cell empty'; grid.appendChild(c);
+    }
+    for (let d = 1; d <= 30; d++) {
+      const c = document.createElement('div');
+      c.className = 'cal-cell';
+      c.textContent = d;
+      if (d === 7) c.classList.add('today');
+      if (d > 7) c.classList.add('future');
+      else if (done.includes(d)) c.classList.add('done');
+      else if (partial.includes(d)) c.classList.add('partial');
+      grid.appendChild(c);
+    }
+  })();
+
+  /* Big calendar */
+  (function() {
+    const grid = document.getElementById('bigCal');
+    const firstDay = 2;
+    const doneDays = [1,2,3,5,6,7,8,10,11,12,14,15,17,18,19,21,22,23,24,26,27,28,29];
+    const partialDays = [4,9,13,16,20,25,30];
+    for (let i = 0; i < firstDay; i++) {
+      const c = document.createElement('div'); c.className='cal-cell empty'; grid.appendChild(c);
+    }
+    for (let d = 1; d <= 30; d++) {
+      const c = document.createElement('div');
+      c.className = 'cal-cell';
+      c.textContent = d;
+      if (d === 7) c.classList.add('today');
+      if (d > 7) c.classList.add('future');
+      else if (doneDays.includes(d)) c.classList.add('done');
+      else if (partialDays.includes(d)) c.classList.add('partial');
+      grid.appendChild(c);
+    }
+  })();
+
+  /* Heatmap */
+  (function() {
+    const hm = document.getElementById('heatmap');
+    for (let i = 0; i < 91; i++) {
+      const c = document.createElement('div');
+      c.className = 'hm';
+      const r = Math.random();
+      if (r > .8) c.classList.add('l4');
+      else if (r > .6) c.classList.add('l3');
+      else if (r > .4) c.classList.add('l2');
+      else if (r > .25) c.classList.add('l1');
+      hm.appendChild(c);
+    }
+  })();
+</script>
+</body>
+</html>
