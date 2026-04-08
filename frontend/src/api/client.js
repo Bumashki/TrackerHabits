@@ -1,5 +1,5 @@
-// Базовый URL бэкенда. Меняй только эту строку при переключении на реальный сервер.
-const BASE_URL = 'http://localhost:8000/api'
+// В dev Vite проксирует /api → бэкенд; в production Nginx отдаёт тот же префикс на FastAPI.
+const BASE_URL = '/api'
 
 async function request(method, path, body) {
   const options = {

@@ -2,10 +2,17 @@
 node_modules/
 dist/
 .vite/
+.venv/
+__pycache__/
+*.py[cod]
+
+# Local SQLite / runtime data
+backend/data/
 
 # Env
 .env
 .env.*
+!.env.example
 
 # Logs & OS
 *.log

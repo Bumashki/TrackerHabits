@@ -35,6 +35,16 @@ app.include_router(friends.router, prefix="/api", tags=["friends"])
 app.include_router(stats.router, prefix="/api", tags=["stats"])
 
 
+@app.get("/")
+def root():
+    return {
+        "service": "Habit Tracker API",
+        "docs": "/docs",
+        "health": "/health",
+        "hint": "Откройте фронтенд в dev: http://localhost:5173 (Vite), API префикс: /api",
+    }
+
+
 @app.get("/health")
 def health():
     return {"ok": True}
