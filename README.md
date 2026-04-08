@@ -6,21 +6,134 @@
 
 ---
 
-## Что нужно установить
+## Локальные тесты на Windows
 
-| Инструмент | Зачем |
-|------------|--------|
-| **Python 3.11+** | Бэкенд |
-| **Node.js 18+** (LTS) | Фронтенд, сборка |
+Ниже — полная последовательность для **PowerShell** (рекомендуется) или **cmd**. Нужны **два окна терминала**: одно для API, второе для фронта.
 
-Проверка в терминале:
+### 1. Что установить
 
-```bash
+| Программа | Зачем | Где взять |
+|-----------|--------|-----------|
+| **Python 3.11+** | бэкенд | [python.org](https://www.python.org/downloads/) — при установке отметьте **Add python.exe to PATH** |
+| **Node.js 18+ LTS** | фронтенд | [nodejs.org](https://nodejs.org/) |
+
+Проверка в **новом** терминале:
+
+```powershell
 python --version
 node --version
+npm --version
 ```
 
-На Windows, если команды `python` нет, попробуйте `py -3 --version`.
+Если `python` не находится, попробуйте:
+
+```powershell
+py -3 --version
+```
+
+Дальше вместо `python` используйте `py -3` (создание venv: `py -3 -m venv .venv`).
+
+---
+
+### 2. Перейти в каталог проекта
+
+Подставьте свой путь к клону репозитория, например:
+
+```powershell
+cd D:\CODE_TEACH\SHADRINA\GROUP_SITE
+```
+
+---
+
+### 3. Бэкенд (первый терминал)
+
+```powershell
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8001
+```
+
+**Если активация `.venv` падает** с текстом про политику выполнения скриптов:
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+Затем снова:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+**Без активации venv** (если не хотите менять политику):
+
+```powershell
+cd backend
+.\.venv\Scripts\pip.exe install -r requirements.txt
+.\.venv\Scripts\uvicorn.exe app.main:app --reload --host 127.0.0.1 --port 8001
+```
+
+(папку `.venv` сначала нужно создать командой `python -m venv .venv`.)
+
+Оставьте это окно открытым. В логе должно быть что-то вроде `Uvicorn running on http://127.0.0.1:8001`.
+
+**Проверка в браузере:**
+
+- `http://127.0.0.1:8001/health` → `{"ok":true}`
+- `http://127.0.0.1:8001/docs` → Swagger
+
+**База по умолчанию** — SQLite, файл `backend\data\app.db` (каталог создаётся сам). Если меняли схему и что-то ломается — удалите `backend\data\app.db` и перезапустите uvicorn.
+
+**Опционально — PostgreSQL:** скопируйте `backend\.env.example` в `backend\.env` и пропишите `DATABASE_URL` и при необходимости `DEFAULT_USER_ID` (UUID).
+
+---
+
+### 4. Фронтенд (второй терминал)
+
+```powershell
+cd D:\CODE_TEACH\SHADRINA\GROUP_SITE\frontend
+npm install
+npm run dev
+```
+
+Откройте в браузере адрес из консоли Vite — обычно **`http://localhost:5173`**.
+
+Запросы идут на **`/api`**; Vite проксирует их на **`http://127.0.0.1:8001`** (`frontend\vite.config.js`). Менять URL бэкенда в коде не нужно.
+
+---
+
+### 5. Куда смотреть в браузере
+
+| URL | Назначение |
+|-----|------------|
+| **http://localhost:5173** | Основной интерфейс приложения |
+| http://127.0.0.1:8001/docs | Документация API (Swagger) |
+| http://127.0.0.1:8001/health | Проверка, что API жив |
+
+Интерфейс — на **5173**, API — на **8001**. Открывать только порт 8001 можно для проверки JSON/Swagger, но не вместо React-приложения.
+
+---
+
+### 6. Частые проблемы на Windows
+
+| Проблема | Что сделать |
+|----------|-------------|
+| **WinError 10013** на порту **8000** | Используйте порт **8001** (как в командах выше). Если смените порт бэкенда — в `frontend\vite.config.js` в `proxy` для `/api` укажите тот же порт в `target`. |
+| **`python` не является командой** | Установите Python с PATH или используйте `py -3`. |
+| **Не находится модуль `app`** | Команды uvicorn запускайте из каталога **`backend`**, а не из корня репозитория. |
+| **Старый SQLite с integer id** | Удалите `backend\data\app.db` и перезапустите бэкенд (схема с UUID). |
+
+---
+
+### 7. Чеклист локального запуска (Windows)
+
+1. [ ] Установлены Python 3.11+ и Node.js 18+.
+2. [ ] В каталоге `backend` создан venv, выполнен `pip install -r requirements.txt`.
+3. [ ] Запущен uvicorn на **127.0.0.1:8001**, `/health` отвечает.
+4. [ ] В каталоге `frontend` выполнены `npm install` и `npm run dev`.
+5. [ ] В браузере открыт **http://localhost:5173**.
 
 ---
 
@@ -31,6 +144,7 @@ GROUP_SITE/
 ├── backend/          # FastAPI, модели, БД
 │   ├── app/
 │   ├── requirements.txt
+│   ├── .env.example
 │   └── .env          # создаёте сами (не в git)
 └── frontend/         # React + Vite
     ├── src/
@@ -39,36 +153,7 @@ GROUP_SITE/
 
 ---
 
-## Локальный запуск (два терминала)
-
-Нужны **два процесса одновременно**: API и фронт. Сначала бэкенд, потом фронт (или наоборот — главное, чтобы к моменту открытия сайта API уже слушал порт).
-
-### 1. Бэкенд (FastAPI)
-
-**Windows (PowerShell):**
-
-```powershell
-cd путь\к\GROUP_SITE\backend
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8001
-```
-
-Если активация ругается на политику выполнения скриптов:
-
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-
-Либо без активации venv:
-
-```powershell
-.\.venv\Scripts\pip.exe install -r requirements.txt
-.\.venv\Scripts\uvicorn.exe app.main:app --reload --host 127.0.0.1 --port 8001
-```
-
-**Linux / macOS:**
+## Linux / macOS (кратко)
 
 ```bash
 cd backend
@@ -78,14 +163,9 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8001
 ```
 
-**Проверка:** в браузере откройте:
+Во втором терминале: `cd frontend && npm install && npm run dev`.
 
-- `http://127.0.0.1:8001/health` — должно быть `{"ok":true}`
-- `http://127.0.0.1:8001/docs` — интерактивная документация API
-
-**База данных по умолчанию** — SQLite, файл `backend/data/app.db` (каталог создаётся при первом запуске).
-
-Чтобы использовать **PostgreSQL**, в папке `backend` создайте файл **`.env`**:
+Пример `.env` для PostgreSQL:
 
 ```env
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DBNAME
@@ -93,45 +173,7 @@ CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 DEFAULT_USER_ID=00000000-0000-0000-0000-000000000001
 ```
 
-`DEFAULT_USER_ID` — **UUID** пользователя «по умолчанию» (когда нет заголовка `X-User-Id`). В проде укажите реальный `users.id` из PostgreSQL.
-
-Без `.env` используется строка из `app/config.py` (SQLite).
-
-Если раньше использовали локальный SQLite со **старыми целочисленными id**, удалите файл `backend/data/app.db` и перезапустите бэкенд (создастся схема с UUID).
-
----
-
-### 2. Фронтенд (Vite + React)
-
-Новый терминал:
-
-```bash
-cd путь/к/GROUP_SITE/frontend
-npm install
-npm run dev
-```
-
-Откройте в браузере адрес из консоли — обычно **`http://localhost:5173`**.
-
-Запросы с фронта идут на **`/api`**; Vite проксирует их на **`http://127.0.0.1:8001`** (см. `frontend/vite.config.js`). Отдельно прописывать URL бэкенда в коде не нужно.
-
----
-
-## Куда заходить в браузере
-
-| URL | Что это |
-|-----|---------|
-| **http://localhost:5173** | Приложение (интерфейс) — **основной адрес для работы** |
-| http://127.0.0.1:8001/docs | Swagger, ручные запросы к API |
-| http://127.0.0.1:8001/health | Проверка, что API запущен |
-
-Не путайте: **интерфейс** — на порту **5173**, **API** — на **8001**. Открытие только `8001` покажет JSON/Swagger, не React-страницу.
-
----
-
-## Порт 8000 на Windows
-
-Если команда с `--port 8000` падает с ошибкой вроде **WinError 10013** («доступ к сокету запрещён»), используйте **8001** (как в примерах выше) или другой свободный порт. Тогда в **`frontend/vite.config.js`** в `proxy` для `/api` укажите тот же порт в `target`.
+`DEFAULT_USER_ID` — UUID пользователя по умолчанию (без заголовка `X-User-Id`).
 
 ---
 
@@ -142,15 +184,4 @@ cd frontend
 npm run build
 ```
 
-Результат в папке **`frontend/dist/`** — статика для nginx или любого веб-сервера. API в проде обычно проксируется с того же домена на префикс `/api`.
-
----
-
-## Краткий чеклист
-
-1. [ ] Виртуальное окружение Python, `pip install -r backend/requirements.txt`
-2. [ ] `uvicorn` запущен на **8001**, `/health` отвечает
-3. [ ] `npm install` и `npm run dev` в `frontend/`
-4. [ ] Браузер: **http://localhost:5173**
-
-После этого приложение должно подгружать данные с бэкенда через `/api`.
+Результат в **`frontend/dist/`** — статика для nginx; API в проде обычно на том же домене по префиксу `/api`.
