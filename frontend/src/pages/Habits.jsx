@@ -10,7 +10,11 @@ function StatusTag({ isActive, streak }) {
 
 export default function Habits() {
   const { habits, remove } = useHabits()
-  const { openEdit }       = useOutletContext()
+  const { openEdit }       = useOutletContext()   
+
+
+
+  
 
   return (
     <div className="page">
