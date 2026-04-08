@@ -6,11 +6,17 @@ import BarChart from '../components/BarChart'
 import MiniCalendar from '../components/MiniCalendar'
 
 const WEEK_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+const MONTH_NAMES = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
 const TODAY_STR   = new Date().toISOString().split('T')[0]
 
 export default function Today() {
   const { habits, complete, uncomplete } = useHabits()
-  const { summary, calendarData, weeklyData } = useStats(2026, 4)
+  const now = new Date()
+  const cy = now.getFullYear()
+  const cm = now.getMonth() + 1
+  const { summary, calendarData, weeklyData } = useStats(cy, cm)
+
+  const wk = (now.getDay() + 6) % 7
 
   const todayHabits = habits.filter(h => h.isScheduledToday)
   const doneCount   = todayHabits.filter(h => h.completedToday).length
@@ -22,11 +28,11 @@ export default function Today() {
     habit.completedToday ? uncomplete(habit.id) : complete(habit.id)
   }
 
-  const weekBars = weeklyData.map((value, i) => ({
+  const weekBars = (weeklyData || []).map((value, i) => ({
     label: WEEK_LABELS[i],
-    value,
-    muted: i === 6,          // воскресенье — ещё не закончилось
-    highlight: i === 0,      // сегодня понедельник в демо
+    value: value || 0,
+    muted: value === 0,
+    highlight: i === wk,
   }))
 
   return (
@@ -70,8 +76,8 @@ export default function Today() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
           <div className="card" style={{ padding: 16 }}>
-            <div className="section-title">Апрель 2026</div>
-            <MiniCalendar year={2026} month={4} data={calendarData} todayStr={TODAY_STR} />
+            <div className="section-title">{MONTH_NAMES[cm - 1]} {cy}</div>
+            <MiniCalendar year={cy} month={cm} data={calendarData} todayStr={TODAY_STR} />
           </div>
 
           {weekBars.length > 0 && (

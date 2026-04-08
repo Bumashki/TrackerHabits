@@ -19,3 +19,14 @@ export function cheerFriend(id) {
 export function inviteFriend(email) {
   return api.post('/friends/invite', { email })
 }
+
+// GET /friends/search?q=nick — поиск по никнейму
+export function searchFriendsByNickname(q) {
+  const qs = new URLSearchParams({ q })
+  return api.get(`/friends/search?${qs}`)
+}
+
+// POST /friends/:id/request — добавить в друзья
+export function addFriendRequest(friendId) {
+  return api.post(`/friends/${friendId}/request`, {})
+}

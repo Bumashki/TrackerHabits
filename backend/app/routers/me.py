@@ -1,13 +1,14 @@
 from datetime import date, timedelta
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import get_user_id
 from app.models import User, Habit, HabitCompletion
+from app.nickname_utils import is_valid_nickname_normalized, normalize_nickname
 from app.habit_logic import habit_streak, weekday_key
 
 router = APIRouter()
@@ -81,6 +82,7 @@ def build_me_response(db: Session, user_id: UUID) -> dict:
     return {
         "id": str(u.id),
         "name": u.name,
+        "nickname": u.nickname,
         "initials": u.initials or (u.name[:2] if u.name else ""),
         "email": u.email,
         "timezone": u.timezone,
@@ -89,6 +91,7 @@ def build_me_response(db: Session, user_id: UUID) -> dict:
         "currentStreak": cur,
         "bestStreak": best,
         "xpPoints": u.xp_points,
+        "xpThisWeek": u.xp_this_week,
         "successRate": _success_rate(db, user_id, today),
         "notifications": {
             "dailyReminder": notif.get("dailyReminder", True),
@@ -115,7 +118,24 @@ def patch_me(
     if data.name is not None:
         u.name = data.name
     if data.nickname is not None:
-        u.nickname = data.nickname
+        raw = data.nickname.strip()
+        if raw == "":
+            u.nickname = None
+        else:
+            nick = normalize_nickname(raw)
+            if not is_valid_nickname_normalized(nick):
+                raise HTTPException(
+                    400,
+                    detail="Nickname: 3–32 символа, латиница, цифры и подчёркивание",
+                )
+            other = (
+                db.query(User)
+                .filter(User.nickname == nick, User.id != user_id)
+                .first()
+            )
+            if other:
+                raise HTTPException(400, detail="Nickname already taken")
+            u.nickname = nick
     if data.email is not None:
         u.email = data.email
     if data.timezone is not None:

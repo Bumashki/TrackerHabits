@@ -1,8 +1,10 @@
 import { api } from './client'
 
-// GET /stats/summary
-export function getStatsSummary() {
-  return api.get('/stats/summary')
+// GET /stats/summary  — опционально ?year=&month= для выбранного месяца
+export function getStatsSummary(year, month) {
+  const qs =
+    year != null && month != null ? `?year=${year}&month=${month}` : ''
+  return api.get(`/stats/summary${qs}`)
 }
 
 // GET /stats/calendar?year=2026&month=4

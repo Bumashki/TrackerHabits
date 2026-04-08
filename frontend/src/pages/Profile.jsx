@@ -1,6 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import KpiCard from '../components/KpiCard'
 
 const ACHIEVEMENTS = [
   { icon: 'fa-fire',          label: 'Серия 30+',       unlocked: true },
@@ -20,16 +19,16 @@ export default function Profile() {
     language: 'ru',
   })
 
-  // Заполняем форму когда пришёл пользователь
-  if (user && form.name === '' && user.name) {
+  useEffect(() => {
+    if (!user) return
     setForm({
-      name:     user.name,
-      nickname: '@anna.m',
-      email:    user.email,
-      timezone: user.timezone,
-      language: user.language,
+      name: user.name || '',
+      nickname: user.nickname || '',
+      email: user.email || '',
+      timezone: user.timezone || 'UTC+3',
+      language: user.language || 'ru',
     })
-  }
+  }, [user])
 
   function handleProfileSubmit(e) {
     e.preventDefault()
@@ -48,10 +47,15 @@ export default function Profile() {
 
       {/* Шапка профиля */}
       <div className="profile-header">
-        <div className="profile-ava">АМ</div>
+        <div className="profile-ava">{user.initials}</div>
         <div>
           <div className="profile-name">{user.name}</div>
           <div className="profile-sub">
+            {user.nickname && (
+              <>
+                @{user.nickname} &middot;{' '}
+              </>
+            )}
             {user.email} &middot; в Habits с{' '}
             {new Date(user.joinedAt).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}
           </div>
@@ -100,8 +104,16 @@ export default function Profile() {
               </div>
               <div className="form-group">
                 <label className="form-label">Никнейм</label>
-                <input className="form-input" type="text" value={form.nickname}
-                  onChange={e => setForm(p => ({ ...p, nickname: e.target.value }))} />
+                <input
+                  className="form-input"
+                  type="text"
+                  value={form.nickname}
+                  placeholder="anna_m"
+                  onChange={e => setForm(p => ({ ...p, nickname: e.target.value }))}
+                />
+                <span style={{ fontSize: 11, color: 'var(--text2)', display: 'block', marginTop: 4 }}>
+                  3–32 символа: латиница, цифры, _ (пусто — сбросить ник)
+                </span>
               </div>
               <div className="form-group full">
                 <label className="form-label">Email</label>

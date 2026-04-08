@@ -7,7 +7,8 @@ import {
   getStatsHeatmap,
 } from '../api/statsApi'
 
-export function useStats(year = 2026, month = 4) {
+/** heatmapYear — год для heatmap и «по месяцам» (может отличаться от year календаря в режиме «год»). */
+export function useStats(year, month, heatmapYear = year) {
   const [summary, setSummary]       = useState(null)
   const [calendarData, setCalendar] = useState({})
   const [weeklyData, setWeekly]     = useState([])
@@ -21,12 +22,13 @@ export function useStats(year = 2026, month = 4) {
       setLoading(true)
       setError(null)
       try {
+        const hy = heatmapYear ?? year
         const [sum, cal, week, monthly, heat] = await Promise.all([
-          getStatsSummary(),
+          getStatsSummary(year, month),
           getStatsCalendar(year, month),
           getStatsWeekly(),
-          getStatsMonthly(year),
-          getStatsHeatmap(year),
+          getStatsMonthly(hy),
+          getStatsHeatmap(hy),
         ])
         setSummary(sum)
         setCalendar(cal)
@@ -40,7 +42,7 @@ export function useStats(year = 2026, month = 4) {
       }
     }
     load()
-  }, [year, month])
+  }, [year, month, heatmapYear])
 
   return { summary, calendarData, weeklyData, monthlyData, heatmapData, loading, error }
 }

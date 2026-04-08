@@ -1,10 +1,15 @@
+import { getAuthHeaders } from '../authStorage'
+
 // В dev Vite проксирует /api → бэкенд; в production Nginx отдаёт тот же префикс на FastAPI.
 const BASE_URL = '/api'
 
 async function request(method, path, body) {
   const options = {
     method,
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
   }
   if (body !== undefined) {
     options.body = JSON.stringify(body)
@@ -17,7 +22,6 @@ async function request(method, path, body) {
     throw new Error(`${res.status}: ${text}`)
   }
 
-  // 204 No Content — бэкенд ничего не возвращает
   if (res.status === 204) return null
 
   return res.json()

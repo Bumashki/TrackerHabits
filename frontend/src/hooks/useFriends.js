@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { getFriends, getFriendsFeed, cheerFriend } from '../api/friendsApi'
 
 export function useFriends() {
@@ -7,27 +7,31 @@ export function useFriends() {
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState(null)
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true)
-      setError(null)
-      try {
-        const [f, a] = await Promise.all([getFriends(), getFriendsFeed()])
-        setFriends(f)
-        setFeed(a)
-      } catch (e) {
-        setError(e.message)
-      } finally {
-        setLoading(false)
-      }
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [f, a] = await Promise.all([getFriends(), getFriendsFeed()])
+      setFriends(f)
+      setFeed(a)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
     }
-    load()
   }, [])
 
-  async function cheer(friendId) {
-    await cheerFriend(friendId)
-    // После реального бэкенда можно обновить счётчик похвал в UI
-  }
+  useEffect(() => {
+    load()
+  }, [load])
 
-  return { friends, feed, loading, error, cheer }
+  const cheer = useCallback(
+    async friendId => {
+      await cheerFriend(friendId)
+      await load()
+    },
+    [load]
+  )
+
+  return { friends, feed, loading, error, cheer, refetch: load }
 }

@@ -1,3 +1,4 @@
+import sqlite3
 from pathlib import Path
 
 from sqlalchemy import create_engine
@@ -8,6 +9,31 @@ from app.config import settings
 
 class Base(DeclarativeBase):
     pass
+
+
+def remove_stale_sqlite_if_integer_user_ids() -> None:
+    """Удаляет локальный SQLite-файл, если в нём старая схема users.id INTEGER (до UUID)."""
+    if not settings.database_url.startswith("sqlite"):
+        return
+    path = Path(settings.database_url.removeprefix("sqlite:///"))
+    if not path.is_file():
+        return
+    stale = False
+    conn = sqlite3.connect(path)
+    try:
+        cur = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='users'"
+        )
+        if not cur.fetchone():
+            return
+        for _cid, name, col_type, *_rest in conn.execute("PRAGMA table_info(users)"):
+            if name == "id" and col_type.upper() in ("INTEGER", "INT"):
+                stale = True
+                break
+    finally:
+        conn.close()
+    if stale:
+        path.unlink(missing_ok=True)
 
 
 connect_args = {}

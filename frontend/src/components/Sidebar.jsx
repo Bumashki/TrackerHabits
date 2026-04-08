@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useHabits } from '../context/HabitsContext'
+import { useAuth } from '../context/AuthContext'
 
 const NAV = [
   { to: '/today',   icon: 'fa-regular fa-circle-check', label: 'Сегодня' },
@@ -48,18 +49,26 @@ export default function Sidebar({ onNavigate, open }) {
 }
 
 function SidebarUser({ habits, onNavigate }) {
+  const { user, logout } = useAuth()
   const streak = habits.reduce((max, h) => Math.max(max, h.streak), 0)
+  const initials = user?.initials || user?.name?.slice(0, 2) || '—'
+  const name = user?.name || 'Профиль'
 
   return (
-    <NavLink to="/profile" className="sidebar-user" style={{ textDecoration: 'none' }} onClick={() => onNavigate?.()}>
-      <div className="ava">АМ</div>
-      <div>
-        <div className="user-name">Анна М.</div>
-        <div className="user-meta">
-          <i className="fa-solid fa-fire" style={{ color: 'var(--warn)', fontSize: 10 }} />
-          {' '}{streak} {streak === 1 ? 'день' : 'дней'}
+    <div className="sidebar-footer-user">
+      <NavLink to="/profile" className="sidebar-user" style={{ textDecoration: 'none' }} onClick={() => onNavigate?.()}>
+        <div className="ava">{initials}</div>
+        <div>
+          <div className="user-name">{name}</div>
+          <div className="user-meta">
+            <i className="fa-solid fa-fire" style={{ color: 'var(--warn)', fontSize: 10 }} />
+            {' '}{streak} {streak === 1 ? 'день' : 'дней'}
+          </div>
         </div>
-      </div>
-    </NavLink>
+      </NavLink>
+      <button type="button" className="sidebar-logout btn btn-ghost btn-sm" onClick={() => { logout(); onNavigate?.() }} title="Выйти">
+        <i className="fa-solid fa-arrow-right-from-bracket" />
+      </button>
+    </div>
   )
 }

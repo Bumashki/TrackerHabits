@@ -14,7 +14,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), default="")
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    nickname: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    nickname: Mapped[str | None] = mapped_column(String(32), unique=True, nullable=True, index=True)
     initials: Mapped[str | None] = mapped_column(String(8), nullable=True)
     color: Mapped[str | None] = mapped_column(String(32), nullable=True)
     timezone: Mapped[str] = mapped_column(String(64), default="UTC+3")

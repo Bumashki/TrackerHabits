@@ -61,18 +61,43 @@ def _heatmap_level(done: int, total: int) -> str:
 
 
 @router.get("/stats/summary")
-def stats_summary(db: Session = Depends(get_db), user_id: UUID = Depends(get_user_id)):
+def stats_summary(
+    year: int | None = Query(None, ge=2000, le=2100),
+    month: int | None = Query(None, ge=1, le=12),
+    db: Session = Depends(get_db),
+    user_id: UUID = Depends(get_user_id),
+):
     today = date.today()
     cur, best = _aggregate_streaks(db, user_id, today)
     user = db.query(User).filter(User.id == user_id).first()
     xp = user.xp_points if user else 0
 
-    month_start = date(today.year, today.month, 1)
-    if today.month == 12:
-        month_end = date(today.year + 1, 1, 1)
+    if year is None or month is None:
+        y, m = today.year, today.month
     else:
-        month_end = date(today.year, today.month + 1, 1)
-    last_m = min(today, month_end - timedelta(days=1))
+        y, m = year, month
+
+    done_today, tot_today = _day_completion_ratio(db, user_id, today)
+
+    month_start = date(y, m, 1)
+    if month_start > today:
+        return {
+            "currentStreak": cur,
+            "completedToday": done_today,
+            "totalToday": tot_today,
+            "monthlyRate": 0,
+            "xpPoints": xp,
+            "bestStreak": best,
+            "avgPerDay": 0,
+            "perfectDays": 0,
+        }
+
+    if m == 12:
+        month_end = date(y + 1, 1, 1)
+    else:
+        month_end = date(y, m + 1, 1)
+    last_in_month = month_end - timedelta(days=1)
+    last_m = min(today, last_in_month) if (y == today.year and m == today.month) else last_in_month
 
     total_slots = 0
     total_done = 0
@@ -100,8 +125,6 @@ def stats_summary(db: Session = Depends(get_db), user_id: UUID = Depends(get_use
             sum_done += done
         d += timedelta(days=1)
     avg_per_day = round(sum_done / max(1, days_with_work), 1)
-
-    done_today, tot_today = _day_completion_ratio(db, user_id, today)
 
     return {
         "currentStreak": cur,
