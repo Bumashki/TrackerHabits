@@ -8,6 +8,7 @@ __pycache__/
 
 # Local SQLite / runtime data
 backend/data/
+backend/.env
 
 # Logs & OS
 *.log
