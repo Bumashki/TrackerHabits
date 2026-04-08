@@ -51,17 +51,13 @@ export function HabitsProvider({ children }) {
   async function complete(id) {
     const today = new Date().toISOString().split('T')[0]
     await completeHabit(id, today)
-    setHabits(prev => prev.map(h =>
-      h.id === id ? { ...h, completedToday: true, streak: h.streak + 1 } : h
-    ))
+    await load()
   }
 
   async function uncomplete(id) {
     const today = new Date().toISOString().split('T')[0]
     await uncompleteHabit(id, today)
-    setHabits(prev => prev.map(h =>
-      h.id === id ? { ...h, completedToday: false, streak: Math.max(0, h.streak - 1) } : h
-    ))
+    await load()
   }
 
   return (
