@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -6,7 +8,7 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite:///./data/app.db"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
-    default_user_id: int = 1
+    default_user_id: UUID = UUID("00000000-0000-0000-0000-000000000001")
 
     @property
     def cors_origins_list(self) -> list[str]:

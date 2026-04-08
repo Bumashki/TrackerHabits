@@ -1,4 +1,5 @@
 from datetime import date
+from uuid import UUID
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -16,7 +17,7 @@ class InviteBody(BaseModel):
     email: str
 
 
-def _friend_today_stats(db: Session, uid: int, today: date) -> tuple[int, int]:
+def _friend_today_stats(db: Session, uid: UUID, today: date) -> tuple[int, int]:
     habits = [
         h
         for h in db.query(Habit).filter(Habit.user_id == uid).all()
@@ -41,7 +42,7 @@ def _friend_today_stats(db: Session, uid: int, today: date) -> tuple[int, int]:
     return done, max(1, total)
 
 
-def _max_streak_friend(db: Session, uid: int, today: date) -> int:
+def _max_streak_friend(db: Session, uid: UUID, today: date) -> int:
     habits = db.query(Habit).filter(Habit.user_id == uid).all()
     best = 0
     for h in habits:
@@ -50,7 +51,7 @@ def _max_streak_friend(db: Session, uid: int, today: date) -> int:
 
 
 @router.get("/friends")
-def get_friends(db: Session = Depends(get_db), user_id: int = Depends(get_user_id)):
+def get_friends(db: Session = Depends(get_db), user_id: UUID = Depends(get_user_id)):
     today = date.today()
     links = (
         db.query(Friendship)
@@ -65,7 +66,7 @@ def get_friends(db: Session = Depends(get_db), user_id: int = Depends(get_user_i
         done, total = _friend_today_stats(db, f.id, today)
         out.append(
             {
-                "id": f.id,
+                "id": str(f.id),
                 "name": f.name,
                 "initials": f.initials or f.name[:2],
                 "color": f.color or "#2d6a4f",
@@ -81,7 +82,7 @@ def get_friends(db: Session = Depends(get_db), user_id: int = Depends(get_user_i
 
 
 @router.get("/friends/feed")
-def get_feed(db: Session = Depends(get_db), user_id: int = Depends(get_user_id)):
+def get_feed(db: Session = Depends(get_db), user_id: UUID = Depends(get_user_id)):
     rows = (
         db.query(ActivityFeedItem)
         .order_by(ActivityFeedItem.id.desc())
@@ -94,7 +95,7 @@ def get_feed(db: Session = Depends(get_db), user_id: int = Depends(get_user_id))
         out.append(
             {
                 "id": r.id,
-                "userId": r.user_id,
+                "userId": str(r.user_id),
                 "initials": u.initials if u else "",
                 "color": u.color if u else None,
                 "text": r.text,
@@ -106,10 +107,10 @@ def get_feed(db: Session = Depends(get_db), user_id: int = Depends(get_user_id))
 
 
 @router.post("/friends/{friend_id}/cheer")
-def cheer(friend_id: int, user_id: int = Depends(get_user_id)):
+def cheer(friend_id: UUID, user_id: UUID = Depends(get_user_id)):
     return {"ok": True}
 
 
 @router.post("/friends/invite")
-def invite(body: InviteBody, user_id: int = Depends(get_user_id)):
+def invite(body: InviteBody, user_id: UUID = Depends(get_user_id)):
     return {"ok": True, "email": str(body.email)}

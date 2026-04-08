@@ -89,9 +89,15 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8001
 
 ```env
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DBNAME
+CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+DEFAULT_USER_ID=00000000-0000-0000-0000-000000000001
 ```
 
+`DEFAULT_USER_ID` — **UUID** пользователя «по умолчанию» (когда нет заголовка `X-User-Id`). В проде укажите реальный `users.id` из PostgreSQL.
+
 Без `.env` используется строка из `app/config.py` (SQLite).
+
+Если раньше использовали локальный SQLite со **старыми целочисленными id**, удалите файл `backend/data/app.db` и перезапустите бэкенд (создастся схема с UUID).
 
 ---
 

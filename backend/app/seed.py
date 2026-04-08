@@ -1,4 +1,5 @@
 """Демо-данные при первом запуске (если таблица users пуста)."""
+import uuid
 from datetime import date, datetime, timedelta
 
 from app.database import SessionLocal
@@ -13,6 +14,7 @@ def seed_if_empty() -> None:
             return
 
         u1 = User(
+            id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
             email="anna.m@email.com",
             password_hash="",
             name="Анна Михайлова",
@@ -33,6 +35,7 @@ def seed_if_empty() -> None:
             },
         )
         u2 = User(
+            id=uuid.UUID("00000000-0000-0000-0000-000000000002"),
             email="katya@email.com",
             password_hash="",
             name="Катя С.",
@@ -49,6 +52,7 @@ def seed_if_empty() -> None:
             notifications={},
         )
         u3 = User(
+            id=uuid.UUID("00000000-0000-0000-0000-000000000003"),
             email="misha@email.com",
             password_hash="",
             name="Миша В.",
@@ -65,6 +69,7 @@ def seed_if_empty() -> None:
             notifications={},
         )
         u4 = User(
+            id=uuid.UUID("00000000-0000-0000-0000-000000000004"),
             email="olya@email.com",
             password_hash="",
             name="Оля А.",

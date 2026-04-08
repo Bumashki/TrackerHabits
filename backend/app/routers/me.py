@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from uuid import UUID
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -26,7 +27,7 @@ class MePatch(BaseModel):
     language: str | None = None
 
 
-def _aggregate_streaks(db: Session, user_id: int, today: date) -> tuple[int, int]:
+def _aggregate_streaks(db: Session, user_id: UUID, today: date) -> tuple[int, int]:
     habits = db.query(Habit).filter(Habit.user_id == user_id).all()
     best = 0
     current_max = 0
@@ -38,7 +39,7 @@ def _aggregate_streaks(db: Session, user_id: int, today: date) -> tuple[int, int
     return current_max, best
 
 
-def _success_rate(db: Session, user_id: int, today: date) -> int:
+def _success_rate(db: Session, user_id: UUID, today: date) -> int:
     habits = [h for h in db.query(Habit).filter(Habit.user_id == user_id).all() if not h.is_paused]
     if not habits:
         return 0
@@ -70,7 +71,7 @@ def _success_rate(db: Session, user_id: int, today: date) -> int:
     return min(100, int(round(100 * done_slots / max(1, total_slots))))
 
 
-def build_me_response(db: Session, user_id: int) -> dict:
+def build_me_response(db: Session, user_id: UUID) -> dict:
     u = db.query(User).filter(User.id == user_id).first()
     if not u:
         return {}
@@ -78,7 +79,7 @@ def build_me_response(db: Session, user_id: int) -> dict:
     cur, best = _aggregate_streaks(db, user_id, today)
     notif = u.notifications or {}
     return {
-        "id": u.id,
+        "id": str(u.id),
         "name": u.name,
         "initials": u.initials or (u.name[:2] if u.name else ""),
         "email": u.email,
@@ -98,7 +99,7 @@ def build_me_response(db: Session, user_id: int) -> dict:
 
 
 @router.get("/me")
-def get_me(db: Session = Depends(get_db), user_id: int = Depends(get_user_id)):
+def get_me(db: Session = Depends(get_db), user_id: UUID = Depends(get_user_id)):
     return build_me_response(db, user_id)
 
 
@@ -106,7 +107,7 @@ def get_me(db: Session = Depends(get_db), user_id: int = Depends(get_user_id)):
 def patch_me(
     data: MePatch,
     db: Session = Depends(get_db),
-    user_id: int = Depends(get_user_id),
+    user_id: UUID = Depends(get_user_id),
 ):
     u = db.query(User).filter(User.id == user_id).first()
     if not u:
@@ -129,7 +130,7 @@ def patch_me(
 def patch_notifications(
     data: NotificationsPatch,
     db: Session = Depends(get_db),
-    user_id: int = Depends(get_user_id),
+    user_id: UUID = Depends(get_user_id),
 ):
     u = db.query(User).filter(User.id == user_id).first()
     if not u:

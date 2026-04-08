@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -68,7 +69,7 @@ def serialize_habit(db: Session, h: Habit, today: date) -> dict:
 
 
 @router.get("/habits")
-def list_habits(db: Session = Depends(get_db), user_id: int = Depends(get_user_id)):
+def list_habits(db: Session = Depends(get_db), user_id: UUID = Depends(get_user_id)):
     today = date.today()
     rows = db.query(Habit).filter(Habit.user_id == user_id).order_by(Habit.id).all()
     return [serialize_habit(db, h, today) for h in rows]
@@ -78,7 +79,7 @@ def list_habits(db: Session = Depends(get_db), user_id: int = Depends(get_user_i
 def create_habit(
     data: HabitCreate,
     db: Session = Depends(get_db),
-    user_id: int = Depends(get_user_id),
+    user_id: UUID = Depends(get_user_id),
 ):
     h = Habit(
         user_id=user_id,
@@ -104,7 +105,7 @@ def update_habit(
     habit_id: int,
     data: HabitUpdate,
     db: Session = Depends(get_db),
-    user_id: int = Depends(get_user_id),
+    user_id: UUID = Depends(get_user_id),
 ):
     h = db.query(Habit).filter(Habit.id == habit_id, Habit.user_id == user_id).first()
     if not h:
@@ -135,7 +136,7 @@ def update_habit(
 def delete_habit(
     habit_id: int,
     db: Session = Depends(get_db),
-    user_id: int = Depends(get_user_id),
+    user_id: UUID = Depends(get_user_id),
 ):
     h = db.query(Habit).filter(Habit.id == habit_id, Habit.user_id == user_id).first()
     if not h:
@@ -150,7 +151,7 @@ def complete_habit(
     habit_id: int,
     body: CompleteBody | None = None,
     db: Session = Depends(get_db),
-    user_id: int = Depends(get_user_id),
+    user_id: UUID = Depends(get_user_id),
 ):
     h = db.query(Habit).filter(Habit.id == habit_id, Habit.user_id == user_id).first()
     if not h:
@@ -177,7 +178,7 @@ def uncomplete_habit(
     habit_id: int,
     date_q: str | None = Query(None, alias="date"),
     db: Session = Depends(get_db),
-    user_id: int = Depends(get_user_id),
+    user_id: UUID = Depends(get_user_id),
 ):
     h = db.query(Habit).filter(Habit.id == habit_id, Habit.user_id == user_id).first()
     if not h:

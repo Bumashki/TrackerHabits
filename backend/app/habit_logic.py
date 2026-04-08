@@ -1,6 +1,7 @@
 """Расчёт streak, completion rate и флагов для привычек."""
 from datetime import date, timedelta
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -18,7 +19,7 @@ def is_scheduled_today(schedule: list, today: date) -> bool:
     return weekday_key(today) in schedule
 
 
-def habit_streak(db: "Session", habit_id: int, user_id: int, today: date) -> int:
+def habit_streak(db: "Session", habit_id: int, user_id: UUID, today: date) -> int:
     from app.models import HabitCompletion
 
     streak = 0
@@ -41,7 +42,7 @@ def habit_streak(db: "Session", habit_id: int, user_id: int, today: date) -> int
     return streak
 
 
-def completion_rate_last_days(db: "Session", habit_id: int, user_id: int, days: int, today: date) -> int:
+def completion_rate_last_days(db: "Session", habit_id: int, user_id: UUID, days: int, today: date) -> int:
     from app.models import HabitCompletion
 
     start = today - timedelta(days=days - 1)
@@ -59,7 +60,7 @@ def completion_rate_last_days(db: "Session", habit_id: int, user_id: int, days: 
     return min(100, int(round(100 * count / max(1, days))))
 
 
-def completed_today(db: "Session", habit_id: int, user_id: int, today: date) -> bool:
+def completed_today(db: "Session", habit_id: int, user_id: UUID, today: date) -> bool:
     from app.models import HabitCompletion
 
     return (

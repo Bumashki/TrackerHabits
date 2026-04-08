@@ -1,6 +1,7 @@
 """Статистика для страницы Stats: summary, календарь, heatmap, неделя/месяцы."""
 from calendar import monthrange
 from datetime import date, timedelta
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
@@ -14,7 +15,7 @@ from app.routers.me import _aggregate_streaks
 router = APIRouter()
 
 
-def _active_habits_today(db: Session, user_id: int, today: date) -> list[Habit]:
+def _active_habits_today(db: Session, user_id: UUID, today: date) -> list[Habit]:
     habits = [
         h
         for h in db.query(Habit).filter(Habit.user_id == user_id).all()
@@ -23,7 +24,7 @@ def _active_habits_today(db: Session, user_id: int, today: date) -> list[Habit]:
     return habits
 
 
-def _day_completion_ratio(db: Session, user_id: int, d: date) -> tuple[int, int]:
+def _day_completion_ratio(db: Session, user_id: UUID, d: date) -> tuple[int, int]:
     """Сколько выполнено из запланированных привычек в день d."""
     habits = _active_habits_today(db, user_id, d)
     if not habits:
@@ -60,7 +61,7 @@ def _heatmap_level(done: int, total: int) -> str:
 
 
 @router.get("/stats/summary")
-def stats_summary(db: Session = Depends(get_db), user_id: int = Depends(get_user_id)):
+def stats_summary(db: Session = Depends(get_db), user_id: UUID = Depends(get_user_id)):
     today = date.today()
     cur, best = _aggregate_streaks(db, user_id, today)
     user = db.query(User).filter(User.id == user_id).first()
@@ -119,7 +120,7 @@ def stats_calendar(
     year: int = Query(..., ge=2000, le=2100),
     month: int = Query(..., ge=1, le=12),
     db: Session = Depends(get_db),
-    user_id: int = Depends(get_user_id),
+    user_id: UUID = Depends(get_user_id),
 ):
     _, last_day = monthrange(year, month)
     out: dict[str, str] = {}
@@ -139,7 +140,7 @@ def stats_calendar(
 
 
 @router.get("/stats/weekly")
-def stats_weekly(db: Session = Depends(get_db), user_id: int = Depends(get_user_id)):
+def stats_weekly(db: Session = Depends(get_db), user_id: UUID = Depends(get_user_id)):
     """Доля выполненных слотов по дням недели (пн–вс) за последние 28 дней."""
     today = date.today()
     start = today - timedelta(days=27)
@@ -160,7 +161,7 @@ def stats_weekly(db: Session = Depends(get_db), user_id: int = Depends(get_user_
 def stats_monthly(
     year: int = Query(..., ge=2000, le=2100),
     db: Session = Depends(get_db),
-    user_id: int = Depends(get_user_id),
+    user_id: UUID = Depends(get_user_id),
 ):
     out: list[int] = []
     for m in range(1, 13):
@@ -189,7 +190,7 @@ def stats_monthly(
 def stats_heatmap(
     year: int = Query(..., ge=2000, le=2100),
     db: Session = Depends(get_db),
-    user_id: int = Depends(get_user_id),
+    user_id: UUID = Depends(get_user_id),
 ):
     """91 клетка: первые 91 день года (как на макете)."""
     start = date(year, 1, 1)
