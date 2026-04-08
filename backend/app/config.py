@@ -1,10 +1,19 @@
+from pathlib import Path
 from uuid import UUID
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Корень backend/ (рядом с app/) — чтобы .env подхватывался при любом cwd (uvicorn из корня репо и т.д.)
+_BACKEND_ROOT = Path(__file__).resolve().parent.parent
+_DOTENV = _BACKEND_ROOT / ".env"
+
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=str(_DOTENV),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     database_url: str = "sqlite:///./data/app.db"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
