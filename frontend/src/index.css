@@ -218,6 +218,26 @@ a { color: inherit; text-decoration: none; }
 .btn-danger:hover { background: #fef2f2; }
 .btn-sm      { padding: 4px 9px; font-size: 12px; }
 
+/* Похвалить: уже похвален в этом часе — зелёный заблокированный */
+.btn-cheer-praised {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #6ee7b7;
+  cursor: not-allowed;
+  opacity: 1;
+}
+.btn-cheer-praised:hover { background: #d1fae5; }
+
+/* Кулдаун, но похвала был не этому человеку — серый */
+.btn-cheer-wait {
+  background: var(--bg);
+  color: var(--text2);
+  border-color: var(--border);
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+.btn-cheer-wait:hover { background: var(--bg); }
+
 /* ── Card ─────────────────────────────────────────────────────────── */
 .card {
   background: var(--white);
@@ -922,6 +942,22 @@ a { color: inherit; text-decoration: none; }
 .heatmap-stats-compact .hm {
   min-width: 0;
   border-radius: 3px;
+}
+
+/* Полный год (~365 клеток) */
+.heatmap-stats-compact.heatmap-year-full {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 3px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.heatmap-stats-compact.heatmap-year-full .hm {
+  width: 9px;
+  height: 9px;
+  min-width: 9px;
+  flex-shrink: 0;
 }
 
 /* Календарь на всю ширину карточки */

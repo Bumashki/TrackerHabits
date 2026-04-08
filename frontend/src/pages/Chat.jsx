@@ -1,28 +1,19 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useFriends } from '../hooks/useFriends'
+import { useAuth } from '../hooks/useAuth'
+import { getMessages, sendMessage } from '../api/messagesApi'
 
 const ME = { id: 'me', name: 'Вы', initials: 'АМ', color: null }
 
-function seedMessages(friends) {
-  const byId = {}
-  friends.forEach(f => {
-    byId[f.id] = [
-      {
-        id: `${f.id}-1`,
-        authorId: f.id,
-        text: 'Привет! Как дела с привычками сегодня?',
-        time: '10:12',
-      },
-      {
-        id: `${f.id}-2`,
-        authorId: 'me',
-        text: 'Привет! Всё отлично, уже почти всё отметила.',
-        time: '10:14',
-      },
-    ]
-  })
-  return byId
+function mapMessage(m, myId, friendId) {
+  const isMine = m.fromUserId === myId
+  return {
+    id: String(m.id),
+    authorId: isMine ? 'me' : friendId,
+    text: m.body,
+    time: new Date(m.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+  }
 }
 
 function FriendAvatar({ friend, size = 34 }) {
@@ -43,6 +34,7 @@ function FriendAvatar({ friend, size = 34 }) {
 }
 
 export default function Chat() {
+  const { user } = useAuth()
   const { friends, loading } = useFriends()
   const location = useLocation()
   const navigate = useNavigate()
@@ -50,12 +42,10 @@ export default function Chat() {
   const [messagesByFriend, setMessagesByFriend] = useState({})
   const [draft, setDraft] = useState('')
   const [mobileThread, setMobileThread] = useState(false)
+  const [msgLoading, setMsgLoading] = useState(false)
+  const [msgError, setMsgError] = useState(null)
+  const [sendBusy, setSendBusy] = useState(false)
   const bottomRef = useRef(null)
-
-  useEffect(() => {
-    if (!friends.length) return
-    setMessagesByFriend(prev => (Object.keys(prev).length ? prev : seedMessages(friends)))
-  }, [friends])
 
   useEffect(() => {
     const id = location.state?.friendId
@@ -65,27 +55,54 @@ export default function Chat() {
     }
   }, [location.state, friends])
 
+  useEffect(() => {
+    if (!selectedId || !user?.id) return
+    let cancelled = false
+    setMsgLoading(true)
+    setMsgError(null)
+    getMessages(selectedId)
+      .then(rows => {
+        if (cancelled) return
+        setMessagesByFriend(prev => ({
+          ...prev,
+          [selectedId]: (rows || []).map(m => mapMessage(m, user.id, selectedId)),
+        }))
+      })
+      .catch(e => {
+        if (!cancelled) setMsgError(e.message)
+      })
+      .finally(() => {
+        if (!cancelled) setMsgLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [selectedId, user?.id])
+
   const selected = friends.find(f => f.id === selectedId)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [selectedId, messagesByFriend])
 
-  function send() {
+  async function send() {
     const t = draft.trim()
-    if (!t || !selectedId) return
-    const list = messagesByFriend[selectedId] || []
-    const next = [
-      ...list,
-      {
-        id: `m-${Date.now()}`,
-        authorId: 'me',
-        text: t,
-        time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
-      },
-    ]
-    setMessagesByFriend(prev => ({ ...prev, [selectedId]: next }))
-    setDraft('')
+    if (!t || !selectedId || !user?.id) return
+    setSendBusy(true)
+    setMsgError(null)
+    try {
+      const m = await sendMessage(selectedId, t)
+      const mapped = mapMessage(m, user.id, selectedId)
+      setMessagesByFriend(prev => ({
+        ...prev,
+        [selectedId]: [...(prev[selectedId] || []), mapped],
+      }))
+      setDraft('')
+    } catch (e) {
+      setMsgError(e.message)
+    } finally {
+      setSendBusy(false)
+    }
   }
 
   function openThread(id) {
@@ -110,7 +127,7 @@ export default function Chat() {
       <div className="chat-page-header">
         <div>
           <div className="chat-page-title">Чат с друзьями</div>
-          <div className="chat-page-sub">Личные сообщения в одном стиле с приложением</div>
+          <div className="chat-page-sub">Сообщения сохраняются на сервере</div>
         </div>
         <button type="button" className="btn btn-ghost btn-sm" onClick={() => navigate('/friends')}>
           <i className="fa-solid fa-users" /> К списку друзей
@@ -150,7 +167,6 @@ export default function Chat() {
           })}
         </div>
 
-        {/* Окно переписки */}
         <div
           className={`chat-thread-panel ${!selectedId ? 'chat-thread-empty' : ''} ${selectedId && mobileThread ? 'chat-thread-mobile-open' : ''}`}
         >
@@ -188,25 +204,35 @@ export default function Chat() {
                 </div>
               </div>
 
+              {msgError && (
+                <div className="auth-error" style={{ margin: '8px 12px 0', fontSize: 12 }}>
+                  {msgError}
+                </div>
+              )}
+
               <div className="chat-messages">
-                {(messagesByFriend[selected.id] || []).map(m => {
-                  const isMine = m.authorId === 'me'
-                  const author = isMine ? ME : selected
-                  return (
-                    <div
-                      key={m.id}
-                      className={`chat-bubble-row ${isMine ? 'mine' : 'theirs'}`}
-                    >
-                      {!isMine && <FriendAvatar friend={author} size={28} />}
-                      <div className="chat-bubble-meta">
-                        <div className={`chat-bubble ${isMine ? 'chat-bubble-mine' : ''}`}>
-                          {m.text}
+                {msgLoading && (
+                  <p style={{ color: 'var(--text2)', fontSize: 13, padding: '8px 0' }}>Загрузка сообщений…</p>
+                )}
+                {!msgLoading &&
+                  (messagesByFriend[selected.id] || []).map(m => {
+                    const isMine = m.authorId === 'me'
+                    const author = isMine ? ME : selected
+                    return (
+                      <div
+                        key={m.id}
+                        className={`chat-bubble-row ${isMine ? 'mine' : 'theirs'}`}
+                      >
+                        {!isMine && <FriendAvatar friend={author} size={28} />}
+                        <div className="chat-bubble-meta">
+                          <div className={`chat-bubble ${isMine ? 'chat-bubble-mine' : ''}`}>
+                            {m.text}
+                          </div>
+                          <span className="chat-bubble-time">{m.time}</span>
                         </div>
-                        <span className="chat-bubble-time">{m.time}</span>
                       </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
                 <div ref={bottomRef} />
               </div>
 
@@ -216,6 +242,7 @@ export default function Chat() {
                   rows={2}
                   placeholder="Написать сообщение…"
                   value={draft}
+                  disabled={sendBusy}
                   onChange={e => setDraft(e.target.value)}
                   onKeyDown={e => {
                     if (e.key === 'Enter' && !e.shiftKey) {
@@ -224,7 +251,12 @@ export default function Chat() {
                     }
                   }}
                 />
-                <button type="button" className="btn btn-primary chat-send" onClick={send}>
+                <button
+                  type="button"
+                  className="btn btn-primary chat-send"
+                  onClick={send}
+                  disabled={sendBusy || !draft.trim()}
+                >
                   <i className="fa-solid fa-paper-plane" />
                   Отправить
                 </button>

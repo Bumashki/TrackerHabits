@@ -60,7 +60,7 @@ export default function Profile() {
             {new Date(user.joinedAt).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}
           </div>
           <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-            <span className="tag tag-green"><i className="fa-solid fa-fire" /> Серия 23+</span>
+            <span className="tag tag-green"><i className="fa-solid fa-fire" /> Серия {user.currentStreak ?? 0}+</span>
             <span className="tag tag-neutral"><i className="fa-solid fa-person-running" /> 100 пробежек</span>
             <span className="tag tag-neutral"><i className="fa-solid fa-book-open" /> Читатель</span>
           </div>

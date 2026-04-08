@@ -2,12 +2,69 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useFriends } from '../hooks/useFriends'
 import { useAuth } from '../context/AuthContext'
-import { inviteFriend, searchFriendsByNickname, addFriendRequest } from '../api/friendsApi'
+import {
+  inviteFriend,
+  searchFriendsByNickname,
+  addFriendRequest,
+  acceptFriendRequest,
+  declineFriendRequest,
+  cancelOutgoingFriendRequest,
+  removeFriend,
+} from '../api/friendsApi'
+
+function cheerWaitLabel(iso) {
+  if (!iso) return ''
+  const ms = new Date(iso).getTime() - Date.now()
+  if (ms <= 0) return ''
+  const m = Math.ceil(ms / 60000)
+  if (m >= 60) return `ещё ${Math.floor(m / 60)} ч`
+  return `ещё ${m} мин`
+}
+
+function CheerButton({ friendId, cheer, canCheer, cheerAvailableAt, lastCheeredFriendId }) {
+  const praised = !canCheer && lastCheeredFriendId === friendId
+  const waitOther = !canCheer && !praised
+  let cls = 'btn btn-sm '
+  if (praised) cls += 'btn-cheer-praised'
+  else if (waitOther) cls += 'btn-cheer-wait'
+  else cls += 'btn-ghost'
+
+  const title = praised
+    ? 'Вы уже похвалили этого друга в этом часе'
+    : canCheer
+      ? 'Похвалить друга'
+      : `Похвалить можно раз в час (${cheerWaitLabel(cheerAvailableAt)})`
+
+  return (
+    <button
+      type="button"
+      className={cls}
+      disabled={!canCheer}
+      title={title}
+      onClick={() => cheer(friendId)}
+    >
+      <i className={`fa-regular ${praised ? 'fa-circle-check' : 'fa-thumbs-up'}`} />{' '}
+      {praised ? 'Похвалено' : 'Похвалить'}
+    </button>
+  )
+}
 
 export default function Friends() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { friends, feed, cheer, loading, error, refetch } = useFriends()
+  const {
+    friends,
+    incoming,
+    outgoing,
+    feed,
+    cheer,
+    canCheer,
+    cheerAvailableAt,
+    lastCheeredFriendId,
+    loading,
+    error,
+    refetch,
+  } = useFriends()
 
   const [inviteOpen, setInviteOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
@@ -20,6 +77,9 @@ export default function Friends() {
   const [searchBusy, setSearchBusy] = useState(false)
   const [searchErr, setSearchErr] = useState(null)
   const [addBusyId, setAddBusyId] = useState(null)
+  const [searchHint, setSearchHint] = useState(null)
+  const [pendingBusy, setPendingBusy] = useState(null)
+  const [removeBusyId, setRemoveBusyId] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -53,14 +113,72 @@ export default function Friends() {
   async function handleAddFriend(friendId) {
     setAddBusyId(friendId)
     setSearchErr(null)
+    setSearchHint(null)
     try {
-      await addFriendRequest(friendId)
+      const res = await addFriendRequest(friendId)
       await refetch()
       setSearchResults(prev => prev.filter(r => r.id !== friendId))
+      if (res.status === 'accepted' && res.mutual) {
+        setSearchHint({ type: 'ok', text: 'Заявка принята — вы в друзьях!' })
+      } else if (res.status === 'friends') {
+        setSearchHint({ type: 'ok', text: 'Уже в друзьях' })
+      } else {
+        setSearchHint({ type: 'ok', text: 'Заявка отправлена — ожидайте ответа' })
+      }
     } catch (e) {
       setSearchErr(e.message)
     } finally {
       setAddBusyId(null)
+    }
+  }
+
+  async function handleAccept(requesterId) {
+    setPendingBusy(requesterId)
+    try {
+      await acceptFriendRequest(requesterId)
+      await refetch()
+    } catch (e) {
+      setSearchErr(e.message)
+    } finally {
+      setPendingBusy(null)
+    }
+  }
+
+  async function handleDecline(requesterId) {
+    setPendingBusy(requesterId)
+    try {
+      await declineFriendRequest(requesterId)
+      await refetch()
+    } catch (e) {
+      setSearchErr(e.message)
+    } finally {
+      setPendingBusy(null)
+    }
+  }
+
+  async function handleCancelOutgoing(friendId) {
+    setPendingBusy(`out-${friendId}`)
+    try {
+      await cancelOutgoingFriendRequest(friendId)
+      await refetch()
+    } catch (e) {
+      setSearchErr(e.message)
+    } finally {
+      setPendingBusy(null)
+    }
+  }
+
+  async function handleRemoveFriend(friendId) {
+    if (!window.confirm('Удалить этого пользователя из друзей?')) return
+    setRemoveBusyId(friendId)
+    setSearchErr(null)
+    try {
+      await removeFriend(friendId)
+      await refetch()
+    } catch (e) {
+      setSearchErr(e.message)
+    } finally {
+      setRemoveBusyId(null)
     }
   }
 
@@ -86,8 +204,16 @@ export default function Friends() {
     if (!em) return
     setInviteBusy(true)
     try {
-      await inviteFriend(em)
-      setInviteOk(`Приглашение отправлено на ${em}`)
+      const res = await inviteFriend(em)
+      if (res.userFound === false) {
+        setInviteOk(res.message || 'Пользователь не найден')
+      } else if (res.status === 'accepted' && res.mutual) {
+        setInviteOk('Вы добавлены в друзья!')
+      } else if (res.status === 'friends') {
+        setInviteOk('Уже в друзьях')
+      } else {
+        setInviteOk(`Заявка отправлена на ${em}`)
+      }
       setInviteEmail('')
       await refetch()
     } catch (err) {
@@ -121,6 +247,90 @@ export default function Friends() {
         </div>
       )}
 
+      {incoming.length > 0 && (
+        <div className="card" style={{ padding: 16, marginBottom: 16 }}>
+          <div className="section-title">Входящие заявки</div>
+          <p style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 10 }}>
+            Примите или отклоните запрос на дружбу.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {incoming.map(row => (
+              <div
+                key={row.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '8px 10px',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--r)',
+                }}
+              >
+                <FriendAvatar friend={row} size={32} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13 }}>{row.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text2)' }}>@{row.nickname}</div>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  disabled={pendingBusy === row.id}
+                  onClick={() => handleAccept(row.id)}
+                >
+                  {pendingBusy === row.id ? '…' : 'Принять'}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  disabled={pendingBusy === row.id}
+                  onClick={() => handleDecline(row.id)}
+                >
+                  Отклонить
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {outgoing.length > 0 && (
+        <div className="card" style={{ padding: 16, marginBottom: 16 }}>
+          <div className="section-title">Исходящие заявки</div>
+          <p style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 10 }}>
+            Ожидают ответа. Можно отменить.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {outgoing.map(row => (
+              <div
+                key={row.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '8px 10px',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--r)',
+                }}
+              >
+                <FriendAvatar friend={row} size={32} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13 }}>{row.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text2)' }}>@{row.nickname}</div>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  disabled={pendingBusy === `out-${row.id}`}
+                  onClick={() => handleCancelOutgoing(row.id)}
+                >
+                  {pendingBusy === `out-${row.id}` ? '…' : 'Отменить'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="card" style={{ padding: 16, marginBottom: 16 }}>
         <div className="section-title">Найти по никнейму</div>
         <p style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 10 }}>
@@ -137,6 +347,9 @@ export default function Friends() {
         />
         {searchBusy && <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 8 }}>Поиск…</div>}
         {searchErr && <div className="auth-error" style={{ marginTop: 10 }}>{searchErr}</div>}
+        {searchHint && (
+          <div className="auth-success" style={{ marginTop: 10 }}>{searchHint.text}</div>
+        )}
         {searchResults.length > 0 && (
           <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
             {searchResults.map(row => (
@@ -187,12 +400,12 @@ export default function Friends() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-          <div className="card" style={{ padding: 16 }}>
-            <div className="section-title">Список друзей</div>
+        <div className="card" style={{ padding: 16 }}>
+          <div className="section-title">Список друзей</div>
 
             {friends.length === 0 && !loading ? (
               <p style={{ color: 'var(--text2)', fontSize: 13, marginTop: 8 }}>
-                Пока нет друзей. Найдите по никнейму выше или отправьте приглашение по email.
+                Пока нет друзей. Примите входящие заявки, найдите по нику или отправьте приглашение по email.
               </p>
             ) : (
               friends.map(friend => (
@@ -218,9 +431,13 @@ export default function Friends() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => cheer(friend.id)}>
-                      <i className="fa-regular fa-thumbs-up" /> Похвалить
-                    </button>
+                    <CheerButton
+                      friendId={friend.id}
+                      cheer={cheer}
+                      canCheer={canCheer}
+                      cheerAvailableAt={cheerAvailableAt}
+                      lastCheeredFriendId={lastCheeredFriendId}
+                    />
                     <button
                       type="button"
                       className="btn btn-ghost btn-sm"
@@ -228,6 +445,16 @@ export default function Friends() {
                       title="Написать в чате"
                     >
                       <i className="fa-regular fa-comment" />
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => handleRemoveFriend(friend.id)}
+                      disabled={removeBusyId === friend.id}
+                      title="Удалить из друзей"
+                      style={{ color: 'var(--text2)' }}
+                    >
+                      {removeBusyId === friend.id ? '…' : <><i className="fa-solid fa-user-minus" /> Удалить</>}
                     </button>
                   </div>
                 </div>
@@ -296,7 +523,7 @@ export default function Friends() {
           <div className="modal" role="dialog" aria-labelledby="invite-title" onClick={e => e.stopPropagation()}>
             <h2 id="invite-title" className="modal-title">Пригласить друга</h2>
             <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 12 }}>
-              Укажите email — мы отправим приглашение (демо: запрос на сервер).
+              Если пользователь уже зарегистрирован, уйдёт заявка в друзья. Иначе подскажем, что email не найден.
             </p>
             <form onSubmit={onInviteSubmit}>
               <label className="form-label" htmlFor="invite-email">Email</label>

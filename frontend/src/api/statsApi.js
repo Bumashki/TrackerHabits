@@ -26,3 +26,14 @@ export function getStatsMonthly(year) {
 export function getStatsHeatmap(year) {
   return api.get(`/stats/heatmap?year=${year}`)
 }
+
+/** Один запрос: summary + calendar + weekly + monthly + heatmap */
+export function getStatsBundle(year, month, heatmapYear) {
+  const hy = heatmapYear ?? year
+  const qs = new URLSearchParams({
+    year: String(year),
+    month: String(month),
+    heatmapYear: String(hy),
+  })
+  return api.get(`/stats/bundle?${qs}`)
+}

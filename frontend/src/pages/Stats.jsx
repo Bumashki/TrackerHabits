@@ -243,8 +243,14 @@ export default function Stats() {
 
       <div className="stats-grid-pair stats-heatmap-calendar">
         <div className="card stats-compact-card stats-heatmap-card">
-          <div className="section-title stats-compact-title">Карта активности — {heatmapY} (91 дн.)</div>
-          <div className="heatmap heatmap-stats-compact">
+          <div className="section-title stats-compact-title">
+            Карта активности — {heatmapY}
+            {' '}
+            ({(heatmapData || []).length || '…'} дн.)
+          </div>
+          <div
+            className={`heatmap heatmap-stats-compact${(heatmapData || []).length > 100 ? ' heatmap-year-full' : ''}`}
+          >
             {(heatmapData || []).map((level, i) => (
               <div key={i} className={`hm ${level}`} />
             ))}

@@ -5,6 +5,54 @@ import { clearAuth, loadAuth, saveAuth } from '../authStorage'
 
 const AuthContext = createContext(null)
 
+/** Минимальный профиль, если /me временно недоступен (иначе логин «ломается» целиком). */
+function userFromTokenResponse(t) {
+  return {
+    id: t.user_id,
+    email: t.email,
+    name: t.name,
+    initials: t.initials || '',
+    nickname: t.nickname ?? null,
+    timezone: 'UTC+3',
+    language: 'ru',
+    joinedAt: new Date().toISOString(),
+    currentStreak: 0,
+    bestStreak: 0,
+    xpPoints: 0,
+    xpThisWeek: 0,
+    successRate: 0,
+    notifications: {
+      dailyReminder: true,
+      friendActivity: true,
+      streakAlert: false,
+    },
+  }
+}
+
+function userFromStoredAuth(a) {
+  if (!a?.userId || !a?.email) return null
+  return {
+    id: a.userId,
+    email: a.email,
+    name: a.name || a.email,
+    initials: a.initials || '',
+    nickname: a.nickname ?? null,
+    timezone: 'UTC+3',
+    language: 'ru',
+    joinedAt: new Date().toISOString(),
+    currentStreak: 0,
+    bestStreak: 0,
+    xpPoints: 0,
+    xpThisWeek: 0,
+    successRate: 0,
+    notifications: {
+      dailyReminder: true,
+      friendActivity: true,
+      streakAlert: false,
+    },
+  }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [ready, setReady] = useState(false)
@@ -21,8 +69,13 @@ export function AuthProvider({ children }) {
       const me = await getMe()
       setUser(me)
     } catch {
-      clearAuth()
-      setUser(null)
+      const fallback = userFromStoredAuth(loadAuth())
+      if (fallback) {
+        setUser(fallback)
+      } else {
+        clearAuth()
+        setUser(null)
+      }
     } finally {
       setReady(true)
     }
@@ -43,8 +96,12 @@ export function AuthProvider({ children }) {
         initials: t.initials,
         nickname: t.nickname,
       })
-      const me = await getMe()
-      setUser(me)
+      try {
+        const me = await getMe()
+        setUser(me)
+      } catch {
+        setUser(userFromTokenResponse(t))
+      }
       navigate('/today', { replace: true })
     },
     [navigate]
@@ -61,8 +118,12 @@ export function AuthProvider({ children }) {
         initials: t.initials,
         nickname: t.nickname,
       })
-      const me = await getMe()
-      setUser(me)
+      try {
+        const me = await getMe()
+        setUser(me)
+      } catch {
+        setUser(userFromTokenResponse(t))
+      }
       navigate('/today', { replace: true })
     },
     [navigate]

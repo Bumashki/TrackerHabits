@@ -60,13 +60,12 @@ def _heatmap_level(done: int, total: int) -> str:
     return "l4"
 
 
-@router.get("/stats/summary")
-def stats_summary(
-    year: int | None = Query(None, ge=2000, le=2100),
-    month: int | None = Query(None, ge=1, le=12),
-    db: Session = Depends(get_db),
-    user_id: UUID = Depends(get_user_id),
-):
+def _stats_summary_impl(
+    db: Session,
+    user_id: UUID,
+    year: int | None,
+    month: int | None,
+) -> dict:
     today = date.today()
     cur, best = _aggregate_streaks(db, user_id, today)
     user = db.query(User).filter(User.id == user_id).first()
@@ -138,13 +137,7 @@ def stats_summary(
     }
 
 
-@router.get("/stats/calendar")
-def stats_calendar(
-    year: int = Query(..., ge=2000, le=2100),
-    month: int = Query(..., ge=1, le=12),
-    db: Session = Depends(get_db),
-    user_id: UUID = Depends(get_user_id),
-):
+def _stats_calendar_impl(db: Session, user_id: UUID, year: int, month: int) -> dict[str, str]:
     _, last_day = monthrange(year, month)
     out: dict[str, str] = {}
     for day in range(1, last_day + 1):
@@ -162,9 +155,7 @@ def stats_calendar(
     return out
 
 
-@router.get("/stats/weekly")
-def stats_weekly(db: Session = Depends(get_db), user_id: UUID = Depends(get_user_id)):
-    """Доля выполненных слотов по дням недели (пн–вс) за последние 28 дней."""
+def _stats_weekly_impl(db: Session, user_id: UUID) -> list[int]:
     today = date.today()
     start = today - timedelta(days=27)
     buckets = [0, 0, 0, 0, 0, 0, 0]
@@ -180,12 +171,7 @@ def stats_weekly(db: Session = Depends(get_db), user_id: UUID = Depends(get_user
     return [min(100, int(round(100 * buckets[i] / max(1, counts[i])))) for i in range(7)]
 
 
-@router.get("/stats/monthly")
-def stats_monthly(
-    year: int = Query(..., ge=2000, le=2100),
-    db: Session = Depends(get_db),
-    user_id: UUID = Depends(get_user_id),
-):
+def _stats_monthly_impl(db: Session, user_id: UUID, year: int) -> list[int]:
     out: list[int] = []
     for m in range(1, 13):
         _, last_day = monthrange(year, m)
@@ -209,20 +195,80 @@ def stats_monthly(
     return out
 
 
+def _stats_heatmap_impl(db: Session, user_id: UUID, year: int) -> list[str]:
+    start = date(year, 1, 1)
+    end = date(year, 12, 31)
+    today = date.today()
+    cells: list[str] = []
+    d = start
+    while d <= end:
+        if d > today:
+            cells.append("")
+        else:
+            done, tot = _day_completion_ratio(db, user_id, d)
+            cells.append(_heatmap_level(done, tot) if tot else "")
+        d += timedelta(days=1)
+    return cells
+
+
+@router.get("/stats/summary")
+def stats_summary(
+    year: int | None = Query(None, ge=2000, le=2100),
+    month: int | None = Query(None, ge=1, le=12),
+    db: Session = Depends(get_db),
+    user_id: UUID = Depends(get_user_id),
+):
+    return _stats_summary_impl(db, user_id, year, month)
+
+
+@router.get("/stats/calendar")
+def stats_calendar(
+    year: int = Query(..., ge=2000, le=2100),
+    month: int = Query(..., ge=1, le=12),
+    db: Session = Depends(get_db),
+    user_id: UUID = Depends(get_user_id),
+):
+    return _stats_calendar_impl(db, user_id, year, month)
+
+
+@router.get("/stats/weekly")
+def stats_weekly(db: Session = Depends(get_db), user_id: UUID = Depends(get_user_id)):
+    """Доля выполненных слотов по дням недели (пн–вс) за последние 28 дней."""
+    return _stats_weekly_impl(db, user_id)
+
+
+@router.get("/stats/monthly")
+def stats_monthly(
+    year: int = Query(..., ge=2000, le=2100),
+    db: Session = Depends(get_db),
+    user_id: UUID = Depends(get_user_id),
+):
+    return _stats_monthly_impl(db, user_id, year)
+
+
 @router.get("/stats/heatmap")
 def stats_heatmap(
     year: int = Query(..., ge=2000, le=2100),
     db: Session = Depends(get_db),
     user_id: UUID = Depends(get_user_id),
 ):
-    """91 клетка: первые 91 день года (как на макете)."""
-    start = date(year, 1, 1)
-    cells: list[str] = []
-    for i in range(91):
-        d = start + timedelta(days=i)
-        if d > date.today():
-            cells.append("")
-            continue
-        done, tot = _day_completion_ratio(db, user_id, d)
-        cells.append(_heatmap_level(done, tot) if tot else "")
-    return cells
+    """Одна клетка на каждый день года (365/366), до сегодняшней даты включительно."""
+    return _stats_heatmap_impl(db, user_id, year)
+
+
+@router.get("/stats/bundle")
+def stats_bundle(
+    year: int = Query(..., ge=2000, le=2100),
+    month: int = Query(..., ge=1, le=12),
+    heatmap_year: int = Query(..., ge=2000, le=2100, alias="heatmapYear"),
+    db: Session = Depends(get_db),
+    user_id: UUID = Depends(get_user_id),
+):
+    """Один HTTP-раунд: summary + calendar + weekly + monthly + heatmap."""
+    return {
+        "summary": _stats_summary_impl(db, user_id, year, month),
+        "calendar": _stats_calendar_impl(db, user_id, year, month),
+        "weekly": _stats_weekly_impl(db, user_id),
+        "monthly": _stats_monthly_impl(db, user_id, heatmap_year),
+        "heatmap": _stats_heatmap_impl(db, user_id, heatmap_year),
+    }

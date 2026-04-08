@@ -17,16 +17,19 @@ export function HabitsProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    setError(null)
+  const load = useCallback(async (opts = {}) => {
+    const silent = opts.silent === true
+    if (!silent) {
+      setLoading(true)
+      setError(null)
+    }
     try {
       const data = await getHabits()
       setHabits(data)
     } catch (e) {
       setError(e.message)
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [])
 
@@ -51,13 +54,13 @@ export function HabitsProvider({ children }) {
   async function complete(id) {
     const today = new Date().toISOString().split('T')[0]
     await completeHabit(id, today)
-    await load()
+    await load({ silent: true })
   }
 
   async function uncomplete(id) {
     const today = new Date().toISOString().split('T')[0]
     await uncompleteHabit(id, today)
-    await load()
+    await load({ silent: true })
   }
 
   return (

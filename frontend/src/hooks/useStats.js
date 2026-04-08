@@ -1,11 +1,5 @@
 import { useState, useEffect } from 'react'
-import {
-  getStatsSummary,
-  getStatsCalendar,
-  getStatsWeekly,
-  getStatsMonthly,
-  getStatsHeatmap,
-} from '../api/statsApi'
+import { getStatsBundle } from '../api/statsApi'
 
 /** heatmapYear — год для heatmap и «по месяцам» (может отличаться от year календаря в режиме «год»). */
 export function useStats(year, month, heatmapYear = year) {
@@ -23,18 +17,12 @@ export function useStats(year, month, heatmapYear = year) {
       setError(null)
       try {
         const hy = heatmapYear ?? year
-        const [sum, cal, week, monthly, heat] = await Promise.all([
-          getStatsSummary(year, month),
-          getStatsCalendar(year, month),
-          getStatsWeekly(),
-          getStatsMonthly(hy),
-          getStatsHeatmap(hy),
-        ])
-        setSummary(sum)
-        setCalendar(cal)
-        setWeekly(week)
-        setMonthly(monthly)
-        setHeatmap(heat)
+        const b = await getStatsBundle(year, month, hy)
+        setSummary(b.summary)
+        setCalendar(b.calendar)
+        setWeekly(b.weekly)
+        setMonthly(b.monthly)
+        setHeatmap(b.heatmap)
       } catch (e) {
         setError(e.message)
       } finally {

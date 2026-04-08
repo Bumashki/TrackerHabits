@@ -26,6 +26,10 @@ class User(Base):
     xp_this_week: Mapped[int] = mapped_column(Integer, default=0)
     is_online: Mapped[bool] = mapped_column(Boolean, default=True)
     last_seen_label: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    last_cheer_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_cheer_friend_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     notifications: Mapped[dict] = mapped_column(JSON, default=dict)
 
     habits: Mapped[list["Habit"]] = relationship(back_populates="user", cascade="all, delete-orphan")
