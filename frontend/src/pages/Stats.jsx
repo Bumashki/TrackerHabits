@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useHabits } from '../context/HabitsContext'
 import { useStats } from '../hooks/useStats'
 import KpiCard from '../components/KpiCard'
@@ -54,6 +54,24 @@ export default function Stats() {
     1,
     Math.ceil(((heatmapData || []).length || 1) / heatmapCols)
   )
+
+  const calendarBlockRef = useRef(null)
+  const [heatmapAreaPx, setHeatmapAreaPx] = useState(null)
+
+  useLayoutEffect(() => {
+    const el = calendarBlockRef.current
+    if (!el) return undefined
+
+    const apply = () => {
+      const h = el.getBoundingClientRect().height
+      if (h >= 24) setHeatmapAreaPx(Math.round(h))
+    }
+
+    apply()
+    const ro = new ResizeObserver(() => apply())
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [calYear, calMonth, loading, summary])
 
   const monthBars = useMemo(
     () =>
@@ -257,7 +275,10 @@ export default function Stats() {
           </div>
           <div
             className="heatmap heatmap-stats-compact"
-            style={{ '--heatmap-rows': heatmapRows }}
+            style={{
+              '--heatmap-rows': heatmapRows,
+              ...(heatmapAreaPx != null ? { height: `${heatmapAreaPx}px` } : {}),
+            }}
           >
             {(heatmapData || []).map((level, i) => (
               <div key={i} className={`hm ${level}`} />
@@ -270,7 +291,7 @@ export default function Stats() {
 
         <div className="card stats-compact-card stats-calendar-card">
           <div className="section-title stats-compact-title">{monthTitle(calYear, calMonth)}</div>
-          <div className="stats-calendar-compact">
+          <div className="stats-calendar-compact" ref={calendarBlockRef}>
             <MiniCalendar year={calYear} month={calMonth} data={calendarData} todayStr={todayStr} />
           </div>
         </div>

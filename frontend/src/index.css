@@ -1001,7 +1001,6 @@ a { color: inherit; text-decoration: none; }
 
 .stats-heatmap-calendar > .card {
   min-height: 0;
-  height: 100%;
 }
 
 .stats-compact-card {
@@ -1045,14 +1044,16 @@ a { color: inherit; text-decoration: none; }
   min-width: 11px;
 }
 
-/* Карта: высота как у соседнего календаря; клетки растягиваются по сетке, без раздувания карточки */
+/* Высота области карты задаётся из JS (= высота блока календаря); иначе 1fr ведёт себя как auto и раздувает блок */
 .heatmap-stats-compact {
-  flex: 1;
-  min-height: 0;
+  flex: 0 0 auto;
   display: grid;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  height: 260px;
+  min-height: 200px;
+  overflow: hidden;
   grid-template-columns: repeat(13, minmax(0, 1fr));
   grid-template-rows: repeat(var(--heatmap-rows, 28), minmax(0, 1fr));
   gap: clamp(2px, 0.35vw, 4px);
@@ -1069,12 +1070,11 @@ a { color: inherit; text-decoration: none; }
   justify-self: stretch;
 }
 
-/* Календарь на всю ширину карточки */
+/* Высота только от сетки месяца — нужна для ResizeObserver (синхрон с картой активности) */
 .stats-calendar-compact {
   width: 100%;
   margin-top: 12px;
-  flex: 1;
-  min-height: 0;
+  flex-shrink: 0;
 }
 
 .stats-calendar-compact .cal-grid {
