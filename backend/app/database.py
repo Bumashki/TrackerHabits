@@ -1,11 +1,19 @@
+import logging
 import sqlite3
 from pathlib import Path
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine.url import make_url
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.schema import CreateColumn
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
+
+
+class Base(DeclarativeBase):
+    pass
 
 
 def _is_postgres_url(url: str) -> bool:
@@ -14,112 +22,6 @@ def _is_postgres_url(url: str) -> bool:
         return make_url(url).drivername.startswith("postgres")
     except Exception:
         return url.startswith("postgresql") or url.startswith("postgres")
-
-
-class Base(DeclarativeBase):
-    pass
-
-
-def ensure_sqlite_users_cheer_columns() -> None:
-    """Добавляет last_cheer_at и last_cheer_friend_id в существующую SQLite users."""
-    if not settings.database_url.startswith("sqlite"):
-        return
-    path = Path(settings.database_url.removeprefix("sqlite:///"))
-    if not path.is_file():
-        return
-    conn = sqlite3.connect(path)
-    try:
-        cur = conn.execute("PRAGMA table_info(users)")
-        cols = [row[1] for row in cur.fetchall()]
-        if not cols:
-            return
-        if "last_cheer_at" not in cols:
-            conn.execute("ALTER TABLE users ADD COLUMN last_cheer_at DATETIME")
-        if "last_cheer_friend_id" not in cols:
-            conn.execute("ALTER TABLE users ADD COLUMN last_cheer_friend_id CHAR(36)")
-        conn.commit()
-    finally:
-        conn.close()
-
-
-def ensure_postgres_users_cheer_columns(engine) -> None:
-    """Добавляет колонки похвалы в существующую таблицу users (PostgreSQL).
-
-    create_all не меняет уже созданные таблицы — без этого запросы к User падают.
-    """
-    if not _is_postgres_url(settings.database_url):
-        return
-    with engine.begin() as conn:
-        conn.execute(
-            text(
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_cheer_at TIMESTAMP WITH TIME ZONE"
-            )
-        )
-        conn.execute(
-            text(
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_cheer_friend_id UUID "
-                "REFERENCES users(id) ON DELETE SET NULL"
-            )
-        )
-
-
-def ensure_sqlite_users_avatar_column() -> None:
-    if not settings.database_url.startswith("sqlite"):
-        return
-    path = Path(settings.database_url.removeprefix("sqlite:///"))
-    if not path.is_file():
-        return
-    conn = sqlite3.connect(path)
-    try:
-        cur = conn.execute("PRAGMA table_info(users)")
-        cols = [row[1] for row in cur.fetchall()]
-        if not cols:
-            return
-        if "avatar_url" not in cols:
-            conn.execute("ALTER TABLE users ADD COLUMN avatar_url TEXT")
-        conn.commit()
-    finally:
-        conn.close()
-
-
-def ensure_postgres_users_avatar_column(engine) -> None:
-    if not _is_postgres_url(settings.database_url):
-        return
-    with engine.begin() as conn:
-        conn.execute(
-            text("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT")
-        )
-        # Старые схемы с VARCHAR(255) не вмещают data URL — расширяем до TEXT.
-        conn.execute(
-            text(
-                """
-                DO $$
-                BEGIN
-                  IF EXISTS (
-                    SELECT 1 FROM information_schema.columns
-                    WHERE table_schema = 'public'
-                      AND table_name = 'users'
-                      AND column_name = 'avatar_url'
-                      AND data_type = 'character varying'
-                  ) THEN
-                    ALTER TABLE users ALTER COLUMN avatar_url TYPE TEXT;
-                  END IF;
-                END $$;
-                """
-            )
-        )
-
-
-def ensure_users_cheer_columns(engine) -> None:
-    """SQLite и PostgreSQL: недостающие колонки для похвалы."""
-    ensure_sqlite_users_cheer_columns()
-    ensure_postgres_users_cheer_columns(engine)
-
-
-def ensure_users_avatar_columns(engine) -> None:
-    """SQLite и PostgreSQL: аватар (data URL или пусто)."""
-    ensure_sqlite_users_avatar_column()
-    ensure_postgres_users_avatar_column(engine)
 
 
 def remove_stale_sqlite_if_integer_user_ids() -> None:
@@ -145,6 +47,85 @@ def remove_stale_sqlite_if_integer_user_ids() -> None:
         conn.close()
     if stale:
         path.unlink(missing_ok=True)
+
+
+def ensure_postgres_avatar_url_text_if_varchar(engine) -> None:
+    """Старые схемы с VARCHAR для avatar_url не вмещают data URL — расширяем до TEXT."""
+    if not _is_postgres_url(settings.database_url):
+        return
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                """
+                DO $$
+                BEGIN
+                  IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_schema = 'public'
+                      AND table_name = 'users'
+                      AND column_name = 'avatar_url'
+                      AND data_type = 'character varying'
+                  ) THEN
+                    ALTER TABLE users ALTER COLUMN avatar_url TYPE TEXT;
+                  END IF;
+                END $$;
+                """
+            )
+        )
+
+
+def ensure_missing_columns(engine) -> None:
+    """Сравнивает модели SQLAlchemy с таблицами в БД и добавляет только недостающие колонки.
+
+    create_all создаёт новые таблицы целиком, но не добавляет колонки в уже существующие —
+    без этого запросы к ORM падают после смены моделей. База не пересоздаётся.
+
+    NOT NULL без server_default на непустой таблице в SQLite может не примениться — смотрите лог.
+    """
+    import app.models  # noqa: F401 — регистрация таблиц в Base.metadata
+
+    insp = inspect(engine)
+    dialect = engine.dialect
+    dialect_name = dialect.name
+    preparer = dialect.identifier_preparer
+
+    for table in Base.metadata.sorted_tables:
+        schema = table.schema
+        try:
+            if not insp.has_table(table.name, schema=schema):
+                continue
+        except Exception as e:
+            logger.warning("ensure_missing_columns: has_table %s: %s", table.name, e)
+            continue
+
+        existing = {c["name"] for c in insp.get_columns(table.name, schema=schema)}
+        if table.schema:
+            qtbl = f"{preparer.quote_schema(table.schema)}.{preparer.quote(table.name)}"
+        else:
+            qtbl = preparer.quote(table.name)
+
+        for column in table.columns:
+            if column.name in existing:
+                continue
+            if column.primary_key:
+                continue
+            try:
+                col_sql = str(CreateColumn(column).compile(dialect=dialect)).strip()
+                if dialect_name == "postgresql":
+                    stmt = f"ALTER TABLE {qtbl} ADD COLUMN IF NOT EXISTS {col_sql}"
+                else:
+                    stmt = f"ALTER TABLE {qtbl} ADD COLUMN {col_sql}"
+                with engine.begin() as conn:
+                    conn.execute(text(stmt))
+                logger.info("Schema: added column %s.%s", table.name, column.name)
+            except Exception as e:
+                logger.warning(
+                    "Schema: could not add column %s.%s (%s). "
+                    "For NOT NULL columns on non-empty tables set server_default in the model.",
+                    table.name,
+                    column.name,
+                    e,
+                )
 
 
 connect_args = {}
