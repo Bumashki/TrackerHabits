@@ -1,6 +1,7 @@
 import re
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -11,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.deps import get_user_id
 from app.models import User, Habit, HabitCompletion, Friendship, ActivityFeedItem
+from app.datetime_utils import isoformat_utc_z
 from app.habit_logic import weekday_key
 
 router = APIRouter()
@@ -29,6 +31,14 @@ def _to_utc_aware(dt: datetime) -> datetime:
     if dt.tzinfo is None:
         return dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(timezone.utc)
+
+
+def _time_label_moscow_now() -> str:
+    """Время для ленты — по Москве (как у пользователей РФ)."""
+    try:
+        return datetime.now(ZoneInfo("Europe/Moscow")).strftime("%H:%M")
+    except Exception:
+        return (datetime.now(timezone.utc) + timedelta(hours=3)).strftime("%H:%M")
 
 
 def _cheer_available_at_iso(me: User | None) -> str | None:
@@ -232,7 +242,7 @@ def _incoming_payload(db: Session, user_id: UUID) -> list[dict]:
                 "initials": u.initials or (u.name[:2] if u.name else ""),
                 "color": u.color or "#2d6a4f",
                 "avatarUrl": u.avatar_url or None,
-                "requestedAt": r.created_at.isoformat() if r.created_at else "",
+                "requestedAt": isoformat_utc_z(r.created_at),
             }
         )
     return out
@@ -260,7 +270,7 @@ def _outgoing_payload(db: Session, user_id: UUID) -> list[dict]:
                 "initials": u.initials or (u.name[:2] if u.name else ""),
                 "color": u.color or "#2d6a4f",
                 "avatarUrl": u.avatar_url or None,
-                "requestedAt": r.created_at.isoformat() if r.created_at else "",
+                "requestedAt": isoformat_utc_z(r.created_at),
             }
         )
     return out
@@ -409,7 +419,7 @@ def cheer(
         ActivityFeedItem(
             user_id=user_id,
             text=f"{me.name} похвалил(а) {friend.name}",
-            time_label=datetime.now().strftime("%H:%M"),
+            time_label=_time_label_moscow_now(),
             streak=None,
         )
     )

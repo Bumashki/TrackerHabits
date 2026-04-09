@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import UserAvatar from '../components/UserAvatar'
 import AvatarCropModal from '../components/AvatarCropModal'
+import { formatMonthYearJoinedMoscow } from '../utils/timeFormat'
 
 const ACHIEVEMENTS = [
   { icon: 'fa-fire',          label: 'Серия 30+',       unlocked: true },
@@ -123,7 +124,7 @@ export default function Profile() {
               </>
             )}
             {user.email} &middot; в Habits с{' '}
-            {new Date(user.joinedAt).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}
+            {formatMonthYearJoinedMoscow(user.joinedAt)}
           </div>
           <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
             <span className="tag tag-green"><i className="fa-solid fa-fire" /> Серия {user.currentStreak ?? 0}+</span>

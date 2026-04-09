@@ -24,10 +24,11 @@ def _validate_avatar_url(raw: str) -> str:
     s = (raw or "").strip()
     if not s:
         raise HTTPException(400, detail="Пустой аватар")
-    if len(s) > 350_000:
+    if len(s) > 1_500_000:
         raise HTTPException(400, detail="Аватар слишком большой")
     if not (
         s.startswith("data:image/jpeg;base64,")
+        or s.startswith("data:image/jpg;base64,")
         or s.startswith("data:image/png;base64,")
         or s.startswith("data:image/webp;base64,")
     ):
@@ -44,6 +45,15 @@ class MePatch(BaseModel):
     timezone: str | None = None
     language: str | None = None
     avatar_url: str | None = Field(None, alias="avatarUrl")
+
+
+def _me_patch_includes_avatar(data: MePatch) -> bool:
+    """Поле могло прийти как avatarUrl (alias); надёжнее, чем только model_dump."""
+    fs = getattr(data, "model_fields_set", None) or getattr(data, "__fields_set__", set())
+    if "avatar_url" in fs:
+        return True
+    dumped = data.model_dump(exclude_unset=True, by_alias=False)
+    return "avatar_url" in dumped
 
 
 def _aggregate_streaks(db: Session, user_id: UUID, today: date) -> tuple[int, int]:
@@ -162,7 +172,7 @@ def patch_me(
         u.timezone = data.timezone
     if data.language is not None:
         u.language = data.language
-    if "avatar_url" in data.model_dump(exclude_unset=True):
+    if _me_patch_includes_avatar(data):
         if data.avatar_url:
             u.avatar_url = _validate_avatar_url(data.avatar_url)
         else:

@@ -141,7 +141,7 @@ export function AuthProvider({ children }) {
 
   const saveProfile = useCallback(async data => {
     const updated = await updateMe(data)
-    setUser(updated)
+    setUser(prev => (prev && updated ? { ...prev, ...updated } : updated))
   }, [])
 
   const saveNotifications = useCallback(async data => {

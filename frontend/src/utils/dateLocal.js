@@ -1,10 +1,13 @@
 /**
- * Календарная дата в локальном часовом поясе пользователя (YYYY-MM-DD).
- * Не использовать toISOString() — он даёт UTC и ломает «сегодня» у границ суток.
+ * Календарная дата YYYY-MM-DD в часовом поясе Europe/Moscow.
+ * Совпадает с отображением времени в чате и «сегодня» для привычек у пользователей РФ.
+ * Не использовать toISOString() — он даёт UTC-дату и ломает «сегодня» у границ суток.
  */
 export function localDateISO(d = new Date()) {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Moscow',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d)
 }

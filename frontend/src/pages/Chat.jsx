@@ -4,6 +4,7 @@ import { useFriends } from '../hooks/useFriends'
 import { useAuth } from '../hooks/useAuth'
 import { getMessages, sendMessage } from '../api/messagesApi'
 import UserAvatar from '../components/UserAvatar'
+import { formatTimeMoscow } from '../utils/timeFormat'
 
 /** Интервал опроса открытого диалога (входящие без перезагрузки страницы) */
 const CHAT_POLL_MS = 3500
@@ -28,7 +29,7 @@ function mapMessage(m, myId, friendId) {
     id: String(m.id),
     authorId: isMine ? 'me' : friendId,
     text: m.body,
-    time: new Date(m.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+    time: formatTimeMoscow(m.createdAt),
   }
 }
 

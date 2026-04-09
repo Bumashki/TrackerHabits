@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import get_user_id
+from app.datetime_utils import isoformat_utc_z
 from app.models import Message
 from app.routers.friends import _are_friends
 
@@ -27,7 +28,7 @@ def _serialize_message(m: Message) -> dict:
         "fromUserId": str(m.from_user_id),
         "toUserId": str(m.to_user_id),
         "body": m.body,
-        "createdAt": m.created_at.isoformat() if m.created_at else "",
+        "createdAt": isoformat_utc_z(m.created_at),
     }
 
 

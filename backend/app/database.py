@@ -89,6 +89,25 @@ def ensure_postgres_users_avatar_column(engine) -> None:
         conn.execute(
             text("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT")
         )
+        # Старые схемы с VARCHAR(255) не вмещают data URL — расширяем до TEXT.
+        conn.execute(
+            text(
+                """
+                DO $$
+                BEGIN
+                  IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_schema = 'public'
+                      AND table_name = 'users'
+                      AND column_name = 'avatar_url'
+                      AND data_type = 'character varying'
+                  ) THEN
+                    ALTER TABLE users ALTER COLUMN avatar_url TYPE TEXT;
+                  END IF;
+                END $$;
+                """
+            )
+        )
 
 
 def ensure_users_cheer_columns(engine) -> None:

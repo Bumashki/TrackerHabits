@@ -49,6 +49,12 @@ export default function Stats() {
 
   const dim = daysInMonth(summaryYear, summaryMonth)
 
+  const heatmapCols = 13
+  const heatmapRows = Math.max(
+    1,
+    Math.ceil(((heatmapData || []).length || 1) / heatmapCols)
+  )
+
   const monthBars = useMemo(
     () =>
       (monthlyData || []).map((value, i) => ({
@@ -249,7 +255,10 @@ export default function Stats() {
             {' '}
             ({(heatmapData || []).length || '…'} дн.)
           </div>
-          <div className="heatmap heatmap-stats-compact">
+          <div
+            className="heatmap heatmap-stats-compact"
+            style={{ '--heatmap-rows': heatmapRows }}
+          >
             {(heatmapData || []).map((level, i) => (
               <div key={i} className={`hm ${level}`} />
             ))}
