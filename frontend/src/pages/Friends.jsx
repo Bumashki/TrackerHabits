@@ -11,6 +11,7 @@ import {
   cancelOutgoingFriendRequest,
   removeFriend,
 } from '../api/friendsApi'
+import UserAvatar from '../components/UserAvatar'
 
 function cheerWaitLabel(iso) {
   if (!iso) return ''
@@ -189,7 +190,8 @@ export default function Friends() {
       name: `${user.name} (вы)`,
       nickname: user.nickname,
       initials: user.initials || user.name?.slice(0, 2) || '?',
-      color: null,
+      color: user.color || '#2d6a4f',
+      avatarUrl: user.avatarUrl,
       xpThisWeek: user.xpThisWeek ?? user.xpPoints ?? 0,
       isMe: true,
     })
@@ -469,7 +471,14 @@ export default function Friends() {
             ) : (
               feed.map(item => (
                 <div key={item.id} className="feed-item">
-                  <FriendAvatar friend={{ initials: item.initials, color: item.color }} size={28} />
+                  <FriendAvatar
+                    friend={{
+                      initials: item.initials,
+                      color: item.color || '#2d6a4f',
+                      avatarUrl: item.avatarUrl,
+                    }}
+                    size={28}
+                  />
                   <div style={{ flex: 1 }}>
                     <div>{item.text}</div>
                     <div className="feed-time">
@@ -556,18 +565,12 @@ export default function Friends() {
 }
 
 function FriendAvatar({ friend, size = 34 }) {
-  const style = {
-    width: size,
-    height: size,
-    fontSize: size < 34 ? 10 : 11,
-    flexShrink: 0,
-  }
-  if (friend.color) {
-    return (
-      <div className="friend-ava" style={{ ...style, background: friend.color }}>
-        {friend.initials}
-      </div>
-    )
-  }
-  return <div className="ava" style={style}>{friend.initials}</div>
+  return (
+    <UserAvatar
+      src={friend.avatarUrl}
+      initials={friend.initials}
+      color={friend.color || '#2d6a4f'}
+      size={size}
+    />
+  )
 }

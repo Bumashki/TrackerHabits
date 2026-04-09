@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { useHabits } from '../context/HabitsContext'
 import { useAuth } from '../context/AuthContext'
+import UserAvatar from './UserAvatar'
 
 const NAV = [
   { to: '/today',   icon: 'fa-regular fa-circle-check', label: 'Сегодня' },
@@ -57,7 +58,12 @@ function SidebarUser({ habits, onNavigate }) {
   return (
     <div className="sidebar-footer-user">
       <NavLink to="/profile" className="sidebar-user" style={{ textDecoration: 'none' }} onClick={() => onNavigate?.()}>
-        <div className="ava">{initials}</div>
+        <UserAvatar
+          src={user?.avatarUrl}
+          initials={initials}
+          color={user?.color || '#2d6a4f'}
+          size={30}
+        />
         <div>
           <div className="user-name">{name}</div>
           <div className="user-meta">

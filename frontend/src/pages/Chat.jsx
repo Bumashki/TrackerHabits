@@ -1,10 +1,9 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useFriends } from '../hooks/useFriends'
 import { useAuth } from '../hooks/useAuth'
 import { getMessages, sendMessage } from '../api/messagesApi'
-
-const ME = { id: 'me', name: 'Вы', initials: 'АМ', color: null }
+import UserAvatar from '../components/UserAvatar'
 
 /** Интервал опроса открытого диалога (входящие без перезагрузки страницы) */
 const CHAT_POLL_MS = 3500
@@ -34,25 +33,30 @@ function mapMessage(m, myId, friendId) {
 }
 
 function FriendAvatar({ friend, size = 34 }) {
-  const style = {
-    width: size,
-    height: size,
-    fontSize: size < 34 ? 10 : 11,
-    flexShrink: 0,
-  }
-  if (friend.color) {
-    return (
-      <div className="friend-ava" style={{ ...style, background: friend.color }}>
-        {friend.initials}
-      </div>
-    )
-  }
-  return <div className="ava" style={style}>{friend.initials}</div>
+  return (
+    <UserAvatar
+      src={friend.avatarUrl}
+      initials={friend.initials}
+      color={friend.color || '#2d6a4f'}
+      size={size}
+    />
+  )
 }
 
 export default function Chat() {
   const { user } = useAuth()
   const { friends, loading } = useFriends()
+
+  const meInChat = useMemo(
+    () => ({
+      id: 'me',
+      name: 'Вы',
+      initials: user?.initials || user?.name?.slice(0, 2) || '?',
+      color: user?.color || '#2d6a4f',
+      avatarUrl: user?.avatarUrl,
+    }),
+    [user]
+  )
   const location = useLocation()
   const navigate = useNavigate()
   const [selectedId, setSelectedId] = useState(null)
@@ -325,13 +329,13 @@ export default function Chat() {
                 {!msgLoading &&
                   (messagesByFriend[selected.id] || []).map(m => {
                     const isMine = m.authorId === 'me'
-                    const author = isMine ? ME : selected
+                    const author = isMine ? meInChat : selected
                     return (
                       <div
                         key={m.id}
                         className={`chat-bubble-row ${isMine ? 'mine' : 'theirs'}`}
                       >
-                        {!isMine && <FriendAvatar friend={author} size={28} />}
+                        <FriendAvatar friend={author} size={28} />
                         <div className="chat-bubble-meta">
                           <div className={`chat-bubble ${isMine ? 'chat-bubble-mine' : ''}`}>
                             {m.text}

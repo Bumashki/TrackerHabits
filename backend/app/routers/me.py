@@ -162,7 +162,7 @@ def patch_me(
         u.timezone = data.timezone
     if data.language is not None:
         u.language = data.language
-    if "avatar_url" in data.model_fields_set:
+    if "avatar_url" in data.model_dump(exclude_unset=True):
         if data.avatar_url:
             u.avatar_url = _validate_avatar_url(data.avatar_url)
         else:

@@ -12,6 +12,8 @@ const ACHIEVEMENTS = [
 
 export default function Profile() {
   const { user, saveProfile, saveNotifications } = useAuth()
+  const fileInputRef = useRef(null)
+  const [avatarBusy, setAvatarBusy] = useState(false)
 
   const [form, setForm] = useState({
     name: '',
@@ -42,6 +44,32 @@ export default function Profile() {
     saveNotifications({ [key]: !user.notifications[key] })
   }
 
+  async function handleAvatarFile(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !file.type.startsWith('image/')) return
+    setAvatarBusy(true)
+    try {
+      const dataUrl = await resizeImageFileToJpegDataUrl(file, 160, 0.88)
+      await saveProfile({ avatarUrl: dataUrl })
+    } catch (err) {
+      alert(err.message || 'Не удалось загрузить фото')
+    } finally {
+      setAvatarBusy(false)
+    }
+  }
+
+  async function clearAvatar() {
+    setAvatarBusy(true)
+    try {
+      await saveProfile({ avatarUrl: null })
+    } catch (err) {
+      alert(err.message || 'Ошибка')
+    } finally {
+      setAvatarBusy(false)
+    }
+  }
+
   if (!user) return null
 
   return (
@@ -49,7 +77,19 @@ export default function Profile() {
 
       {/* Шапка профиля */}
       <div className="profile-header">
-        <div className="profile-ava">{user.initials}</div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          style={{ display: 'none' }}
+          onChange={handleAvatarFile}
+        />
+        <UserAvatar
+          src={user.avatarUrl}
+          initials={user.initials}
+          color={user.color || '#2d6a4f'}
+          size={56}
+        />
         <div>
           <div className="profile-name">{user.name}</div>
           <div className="profile-sub">
@@ -67,9 +107,21 @@ export default function Profile() {
             <span className="tag tag-neutral"><i className="fa-solid fa-book-open" /> Читатель</span>
           </div>
         </div>
-        <button className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto', alignSelf: 'flex-start' }}>
-          <i className="fa-regular fa-pen-to-square" /> Изменить фото
-        </button>
+        <div style={{ marginLeft: 'auto', alignSelf: 'flex-start', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            disabled={avatarBusy}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <i className="fa-regular fa-pen-to-square" /> {avatarBusy ? '…' : 'Изменить фото'}
+          </button>
+          {user.avatarUrl && (
+            <button type="button" className="btn btn-ghost btn-sm" disabled={avatarBusy} onClick={clearAvatar}>
+              Убрать фото
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Цифры */}
