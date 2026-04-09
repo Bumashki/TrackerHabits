@@ -8,6 +8,13 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: true,
+    // Запросы через Nginx с другим Host (напр. habits.forwardnet.ru)
+    allowedHosts: [
+      'habits.forwardnet.ru',
+      'localhost',
+      '127.0.0.1',
+      '194.67.66.112',
+    ],
     proxy: {
       '/api': { target: apiTarget, changeOrigin: true },
     },
