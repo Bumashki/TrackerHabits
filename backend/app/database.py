@@ -198,7 +198,7 @@ def _try_add_column(engine, dialect_name: str, qtbl: str, table_name: str, colum
 
 
 def ensure_postgres_avatar_url_text_if_varchar(engine) -> None:
-    """Старые схемы с VARCHAR для avatar_url не вмещают data URL — расширяем до TEXT."""
+    """avatar_url должен быть TEXT (длинные data URL). Любой не-text (varchar и т.д.) приводим к TEXT."""
     if not _is_postgres_url(settings.database_url):
         return
     with engine.begin() as conn:
@@ -208,13 +208,15 @@ def ensure_postgres_avatar_url_text_if_varchar(engine) -> None:
                 DO $$
                 BEGIN
                   IF EXISTS (
-                    SELECT 1 FROM information_schema.columns
-                    WHERE table_schema = 'public'
-                      AND table_name = 'users'
-                      AND column_name = 'avatar_url'
-                      AND data_type = 'character varying'
+                    SELECT 1 FROM information_schema.columns c
+                    WHERE c.table_schema = 'public'
+                      AND c.table_name = 'users'
+                      AND c.column_name = 'avatar_url'
+                      AND c.data_type IS DISTINCT FROM 'text'
                   ) THEN
-                    ALTER TABLE users ALTER COLUMN avatar_url TYPE TEXT;
+                    ALTER TABLE public.users
+                      ALTER COLUMN avatar_url TYPE TEXT
+                      USING avatar_url::text;
                   END IF;
                 END $$;
                 """
@@ -289,6 +291,39 @@ def ensure_missing_columns(engine) -> None:
             if column.primary_key:
                 continue
             _try_add_column(engine, dialect_name, qtbl, table.name, column, dialect)
+
+
+def ensure_tables_from_models(engine) -> None:
+    """Создаёт все таблицы по моделям, если их ещё нет (пустая БД / первый запуск).
+
+    На PostgreSQL после create_all проверяем наличие public.users; при сбое — повтор.
+    """
+    import app.models  # noqa: F401 — регистрация таблиц в Base.metadata
+
+    for attempt in (1, 2):
+        try:
+            Base.metadata.create_all(bind=engine)
+        except Exception:
+            logger.exception("ensure_tables_from_models: create_all (попытка %s)", attempt)
+            raise
+
+        if not _is_postgres_url(settings.database_url):
+            return
+
+        if inspect(engine).has_table("users", schema="public"):
+            if attempt > 1:
+                logger.info("PostgreSQL: таблицы созданы со второй попытки.")
+            return
+
+        if attempt == 1:
+            logger.warning(
+                "PostgreSQL: после create_all нет public.users — повторяем create_all"
+            )
+
+    raise RuntimeError(
+        "PostgreSQL: таблицы не созданы. Проверьте права пользователя БД (CREATE в схеме "
+        "public), корректность DATABASE_URL и логи ошибок выше."
+    )
 
 
 connect_args = {}

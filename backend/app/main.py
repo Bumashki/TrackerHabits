@@ -7,10 +7,10 @@ from fastapi.responses import FileResponse
 
 from app.config import settings
 from app.database import (
-    Base,
     engine,
     ensure_missing_columns,
     ensure_postgres_avatar_url_text_if_varchar,
+    ensure_tables_from_models,
     remove_stale_sqlite_if_integer_user_ids,
 )
 from app.routers import auth, friends, habits, me, messages, stats
@@ -21,7 +21,7 @@ import app.models  # noqa: F401 — регистрация таблиц в Base.
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     remove_stale_sqlite_if_integer_user_ids()
-    Base.metadata.create_all(bind=engine)
+    ensure_tables_from_models(engine)
     ensure_missing_columns(engine)
     ensure_postgres_avatar_url_text_if_varchar(engine)
     from app.seed import seed_if_empty
