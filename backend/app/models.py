@@ -17,6 +17,7 @@ class User(Base):
     nickname: Mapped[str | None] = mapped_column(String(32), unique=True, nullable=True, index=True)
     initials: Mapped[str | None] = mapped_column(String(8), nullable=True)
     color: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     timezone: Mapped[str] = mapped_column(String(64), default="UTC+3")
     language: Mapped[str] = mapped_column(String(16), default="ru")
     joined_at: Mapped[date] = mapped_column(Date, nullable=False)

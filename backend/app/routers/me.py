@@ -2,7 +2,7 @@ from datetime import date, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -20,12 +20,30 @@ class NotificationsPatch(BaseModel):
     streakAlert: bool | None = None
 
 
+def _validate_avatar_url(raw: str) -> str:
+    s = (raw or "").strip()
+    if not s:
+        raise HTTPException(400, detail="Пустой аватар")
+    if len(s) > 350_000:
+        raise HTTPException(400, detail="Аватар слишком большой")
+    if not (
+        s.startswith("data:image/jpeg;base64,")
+        or s.startswith("data:image/png;base64,")
+        or s.startswith("data:image/webp;base64,")
+    ):
+        raise HTTPException(400, detail="Разрешены только изображения JPEG, PNG или WebP (data URL)")
+    return s
+
+
 class MePatch(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     name: str | None = None
     nickname: str | None = None
     email: str | None = None
     timezone: str | None = None
     language: str | None = None
+    avatar_url: str | None = Field(None, alias="avatarUrl")
 
 
 def _aggregate_streaks(db: Session, user_id: UUID, today: date) -> tuple[int, int]:
@@ -84,6 +102,8 @@ def build_me_response(db: Session, user_id: UUID) -> dict:
         "name": u.name,
         "nickname": u.nickname,
         "initials": u.initials or (u.name[:2] if u.name else ""),
+        "color": u.color or "#2d6a4f",
+        "avatarUrl": u.avatar_url or None,
         "email": u.email,
         "timezone": u.timezone,
         "language": u.language,
@@ -142,6 +162,11 @@ def patch_me(
         u.timezone = data.timezone
     if data.language is not None:
         u.language = data.language
+    if "avatar_url" in data.model_fields_set:
+        if data.avatar_url:
+            u.avatar_url = _validate_avatar_url(data.avatar_url)
+        else:
+            u.avatar_url = None
     db.commit()
     return build_me_response(db, user_id)
 

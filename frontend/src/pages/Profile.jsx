@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import UserAvatar from '../components/UserAvatar'
+import { resizeImageFileToJpegDataUrl } from '../utils/imageResize'
 
 const ACHIEVEMENTS = [
   { icon: 'fa-fire',          label: 'Серия 30+',       unlocked: true },

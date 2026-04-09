@@ -145,6 +145,7 @@ def _serialize_friend(f: User, done: int, total: int, streak: int) -> dict:
         "nickname": f.nickname,
         "initials": f.initials or f.name[:2],
         "color": f.color or "#2d6a4f",
+        "avatarUrl": f.avatar_url or None,
         "isOnline": f.is_online,
         "lastSeen": f.last_seen_label,
         "streak": streak,
@@ -230,6 +231,7 @@ def _incoming_payload(db: Session, user_id: UUID) -> list[dict]:
                 "nickname": u.nickname,
                 "initials": u.initials or (u.name[:2] if u.name else ""),
                 "color": u.color or "#2d6a4f",
+                "avatarUrl": u.avatar_url or None,
                 "requestedAt": r.created_at.isoformat() if r.created_at else "",
             }
         )
@@ -257,6 +259,7 @@ def _outgoing_payload(db: Session, user_id: UUID) -> list[dict]:
                 "nickname": u.nickname,
                 "initials": u.initials or (u.name[:2] if u.name else ""),
                 "color": u.color or "#2d6a4f",
+                "avatarUrl": u.avatar_url or None,
                 "requestedAt": r.created_at.isoformat() if r.created_at else "",
             }
         )
@@ -289,6 +292,7 @@ def _feed_payload(db: Session, user_id: UUID) -> list[dict]:
                 "userId": str(r.user_id),
                 "initials": u.initials if u else "",
                 "color": u.color if u else None,
+                "avatarUrl": u.avatar_url if u else None,
                 "text": r.text,
                 "time": r.time_label,
                 "streak": r.streak,
@@ -445,6 +449,7 @@ def search_friends(
                 "nickname": u.nickname,
                 "initials": u.initials or (u.name[:2] if u.name else ""),
                 "color": u.color or "#2d6a4f",
+                "avatarUrl": u.avatar_url or None,
             }
         )
     return out
