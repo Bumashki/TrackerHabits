@@ -249,9 +249,7 @@ export default function Stats() {
             {' '}
             ({(heatmapData || []).length || '…'} дн.)
           </div>
-          <div
-            className={`heatmap heatmap-stats-compact${(heatmapData || []).length > 100 ? ' heatmap-year-full' : ''}`}
-          >
+          <div className="heatmap heatmap-stats-compact">
             {(heatmapData || []).map((level, i) => (
               <div key={i} className={`hm ${level}`} />
             ))}

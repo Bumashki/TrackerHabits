@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 
-export default function Modal({ title, open, onClose, children }) {
+export default function Modal({ title, open, onClose, children, className = '' }) {
   // Закрытие по Escape
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose() }
@@ -15,7 +15,7 @@ export default function Modal({ title, open, onClose, children }) {
       className="overlay open"
       onClick={e => e.target === e.currentTarget && onClose()}
     >
-      <div className="modal">
+      <div className={`modal ${className}`.trim()}>
         <div className="modal-header">
           <span className="modal-title">{title}</span>
           <button className="modal-close" onClick={onClose} aria-label="Закрыть">

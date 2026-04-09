@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import UserAvatar from '../components/UserAvatar'
-import { resizeImageFileToJpegDataUrl } from '../utils/imageResize'
+import AvatarCropModal from '../components/AvatarCropModal'
 
 const ACHIEVEMENTS = [
   { icon: 'fa-fire',          label: 'Серия 30+',       unlocked: true },
@@ -14,6 +14,8 @@ export default function Profile() {
   const { user, saveProfile, saveNotifications } = useAuth()
   const fileInputRef = useRef(null)
   const [avatarBusy, setAvatarBusy] = useState(false)
+  const [cropOpen, setCropOpen] = useState(false)
+  const [cropFile, setCropFile] = useState(null)
 
   const [form, setForm] = useState({
     name: '',
@@ -44,16 +46,26 @@ export default function Profile() {
     saveNotifications({ [key]: !user.notifications[key] })
   }
 
-  async function handleAvatarFile(e) {
+  function handleAvatarFile(e) {
     const file = e.target.files?.[0]
     e.target.value = ''
-    if (!file || !file.type.startsWith('image/')) return
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      alert('Выберите файл изображения (JPEG, PNG или WebP).')
+      return
+    }
+    setCropFile(file)
+    setCropOpen(true)
+  }
+
+  async function handleAvatarCropped(dataUrl) {
     setAvatarBusy(true)
     try {
-      const dataUrl = await resizeImageFileToJpegDataUrl(file, 160, 0.88)
       await saveProfile({ avatarUrl: dataUrl })
+      setCropOpen(false)
+      setCropFile(null)
     } catch (err) {
-      alert(err.message || 'Не удалось загрузить фото')
+      alert(err.message || 'Не удалось сохранить фото')
     } finally {
       setAvatarBusy(false)
     }
@@ -74,6 +86,18 @@ export default function Profile() {
 
   return (
     <div className="page">
+      <AvatarCropModal
+        open={cropOpen}
+        file={cropFile}
+        busy={avatarBusy}
+        onClose={() => {
+          if (!avatarBusy) {
+            setCropOpen(false)
+            setCropFile(null)
+          }
+        }}
+        onConfirm={handleAvatarCropped}
+      />
 
       {/* Шапка профиля */}
       <div className="profile-header">
