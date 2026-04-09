@@ -13,7 +13,7 @@ const NAV = [
 
 export default function Sidebar({ onNavigate, open }) {
   const { habits } = useHabits()
-  const todayHabits  = habits.filter(h => h.isScheduledToday)
+  const todayHabits  = habits.filter(h => h.isActive && h.isScheduledToday)
   const doneCount    = todayHabits.filter(h => h.completedToday).length
 
   return (

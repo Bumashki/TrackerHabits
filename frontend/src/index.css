@@ -668,13 +668,18 @@ a { color: inherit; text-decoration: none; }
   background: var(--bg);
 }
 
+.chat-list-section-title {
+  padding: 0 4px 8px;
+  margin-bottom: 4px;
+}
+
 .chat-list-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   width: 100%;
   text-align: left;
-  padding: 10px 10px;
+  padding: 11px 10px;
   border: 1px solid transparent;
   border-radius: var(--r);
   background: transparent;
@@ -682,6 +687,17 @@ a { color: inherit; text-decoration: none; }
   font-family: inherit;
   color: inherit;
   transition: background 0.1s;
+}
+
+.chat-list-item .friend-ava,
+.chat-list-item .ava {
+  margin-top: 1px;
+}
+
+.chat-list-item .online,
+.chat-list-item .offline {
+  margin-top: 5px;
+  flex-shrink: 0;
 }
 
 .chat-list-item:hover {
@@ -707,23 +723,32 @@ a { color: inherit; text-decoration: none; }
 }
 
 .chat-list-name {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .chat-list-time {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text3);
   flex-shrink: 0;
+  line-height: 1.2;
 }
 
 .chat-list-preview {
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 1.35;
   color: var(--text2);
-  margin-top: 2px;
+  margin-top: 3px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-height: 1.35em;
 }
 
 .chat-thread-panel {
@@ -1235,4 +1260,79 @@ a { color: inherit; text-decoration: none; }
 .auth-loading-inner {
   font-size: 15px;
   color: var(--text2);
+}
+
+@media (max-width: 640px) {
+  .auth-page {
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+      max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  }
+
+  .auth-card {
+    max-width: none;
+    padding: 22px 18px;
+    border-radius: 12px;
+    box-shadow: 0 2px 18px rgba(0, 0, 0, 0.08);
+  }
+
+  .auth-brand {
+    margin-bottom: 16px;
+    font-size: 15px;
+  }
+
+  .auth-title {
+    font-size: 20px;
+  }
+
+  .auth-sub {
+    margin-bottom: 18px;
+    font-size: 14px;
+  }
+
+  .auth-form {
+    gap: 8px;
+  }
+
+  /* 16px — чтобы iOS не увеличивал страницу при фокусе в поле */
+  .auth-page .form-input {
+    font-size: 16px;
+    min-height: 44px;
+    padding: 10px 12px;
+  }
+
+  .auth-page .form-label {
+    font-size: 12px;
+  }
+
+  .auth-page .btn {
+    min-height: 48px;
+    font-size: 16px;
+  }
+
+  .auth-error {
+    word-break: break-word;
+    font-size: 14px;
+  }
+
+  .auth-footer {
+    margin-top: 18px;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+}
+
+@media (max-width: 380px) {
+  .auth-page {
+    padding: max(12px, env(safe-area-inset-top)) 12px max(20px, env(safe-area-inset-bottom)) 12px;
+  }
+
+  .auth-card {
+    padding: 18px 14px;
+  }
+
+  .auth-title {
+    font-size: 19px;
+  }
 }

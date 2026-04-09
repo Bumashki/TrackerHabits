@@ -4,6 +4,7 @@ import { useStats } from '../hooks/useStats'
 import KpiCard from '../components/KpiCard'
 import BarChart from '../components/BarChart'
 import MiniCalendar from '../components/MiniCalendar'
+import { localDateISO } from '../utils/dateLocal'
 
 const MONTH_LABELS = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек']
 const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
@@ -20,7 +21,7 @@ export default function Stats() {
   const now = new Date()
   const todayY = now.getFullYear()
   const todayM = now.getMonth() + 1
-  const todayStr = now.toISOString().split('T')[0]
+  const todayStr = localDateISO(now)
 
   const [period, setPeriod] = useState('month')
   const [viewYear, setViewYear] = useState(todayY)

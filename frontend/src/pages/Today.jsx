@@ -4,10 +4,11 @@ import HabitItem from '../components/HabitItem'
 import KpiCard from '../components/KpiCard'
 import BarChart from '../components/BarChart'
 import MiniCalendar from '../components/MiniCalendar'
+import { localDateISO } from '../utils/dateLocal'
 
 const WEEK_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 const MONTH_NAMES = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
-const TODAY_STR   = new Date().toISOString().split('T')[0]
+const TODAY_STR = localDateISO()
 
 export default function Today() {
   const { habits, complete, uncomplete } = useHabits()
@@ -18,7 +19,7 @@ export default function Today() {
 
   const wk = (now.getDay() + 6) % 7
 
-  const todayHabits = habits.filter(h => h.isScheduledToday)
+  const todayHabits = habits.filter(h => h.isActive && h.isScheduledToday)
   const doneCount   = todayHabits.filter(h => h.completedToday).length
   const pct         = todayHabits.length
     ? Math.round(doneCount / todayHabits.length * 100)

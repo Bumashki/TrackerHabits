@@ -18,6 +18,16 @@ from app.habit_logic import (
 router = APIRouter()
 
 
+def _client_today(today_q: str | None) -> date:
+    """День «сегодня» от клиента (YYYY-MM-DD) или дата сервера."""
+    if today_q:
+        try:
+            return date.fromisoformat(today_q[:10])
+        except ValueError:
+            pass
+    return date.today()
+
+
 class HabitCreate(BaseModel):
     name: str
     icon: str = "fa-spa"
@@ -69,8 +79,12 @@ def serialize_habit(db: Session, h: Habit, today: date) -> dict:
 
 
 @router.get("/habits")
-def list_habits(db: Session = Depends(get_db), user_id: UUID = Depends(get_user_id)):
-    today = date.today()
+def list_habits(
+    db: Session = Depends(get_db),
+    user_id: UUID = Depends(get_user_id),
+    today_q: str | None = Query(None, alias="today"),
+):
+    today = _client_today(today_q)
     rows = db.query(Habit).filter(Habit.user_id == user_id).order_by(Habit.id).all()
     return [serialize_habit(db, h, today) for h in rows]
 
@@ -80,6 +94,7 @@ def create_habit(
     data: HabitCreate,
     db: Session = Depends(get_db),
     user_id: UUID = Depends(get_user_id),
+    today_q: str | None = Query(None, alias="today"),
 ):
     h = Habit(
         user_id=user_id,
@@ -97,7 +112,7 @@ def create_habit(
     db.add(h)
     db.commit()
     db.refresh(h)
-    return serialize_habit(db, h, date.today())
+    return serialize_habit(db, h, _client_today(today_q))
 
 
 @router.patch("/habits/{habit_id}")
@@ -106,6 +121,7 @@ def update_habit(
     data: HabitUpdate,
     db: Session = Depends(get_db),
     user_id: UUID = Depends(get_user_id),
+    today_q: str | None = Query(None, alias="today"),
 ):
     h = db.query(Habit).filter(Habit.id == habit_id, Habit.user_id == user_id).first()
     if not h:
@@ -129,7 +145,7 @@ def update_habit(
     if data.is_paused is not None:
         h.is_paused = data.is_paused
     db.commit()
-    return serialize_habit(db, h, date.today())
+    return serialize_habit(db, h, _client_today(today_q))
 
 
 @router.delete("/habits/{habit_id}", status_code=204)
@@ -160,7 +176,11 @@ def complete_habit(
     d = date.fromisoformat(raw[:10])
     row = (
         db.query(HabitCompletion)
-        .filter(HabitCompletion.habit_id == habit_id, HabitCompletion.day == d)
+        .filter(
+            HabitCompletion.habit_id == habit_id,
+            HabitCompletion.user_id == user_id,
+            HabitCompletion.day == d,
+        )
         .first()
     )
     if row:
@@ -187,7 +207,11 @@ def uncomplete_habit(
     d = date.fromisoformat(raw[:10])
     row = (
         db.query(HabitCompletion)
-        .filter(HabitCompletion.habit_id == habit_id, HabitCompletion.day == d)
+        .filter(
+            HabitCompletion.habit_id == habit_id,
+            HabitCompletion.user_id == user_id,
+            HabitCompletion.day == d,
+        )
         .first()
     )
     if row:

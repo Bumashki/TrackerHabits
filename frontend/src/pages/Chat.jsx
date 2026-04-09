@@ -6,6 +6,23 @@ import { getMessages, sendMessage } from '../api/messagesApi'
 
 const ME = { id: 'me', name: 'Вы', initials: 'АМ', color: null }
 
+/** Интервал опроса открытого диалога (входящие без перезагрузки страницы) */
+const CHAT_POLL_MS = 3500
+/** Реже обновляем остальные диалоги — превью в списке (ограничение числа параллельных запросов) */
+const CHAT_SIDEBAR_POLL_MS = 8000
+const CHAT_SIDEBAR_POLL_MAX_FRIENDS = 40
+
+/** Превью последнего сообщения в списке диалогов (как в мессенджерах: «Вы: …» для своих) */
+const CHAT_PREVIEW_MAX = 80
+
+function chatListPreviewLine(last) {
+  if (!last?.text) return ''
+  const raw = String(last.text).trim()
+  if (!raw) return ''
+  const clipped = raw.length > CHAT_PREVIEW_MAX ? `${raw.slice(0, CHAT_PREVIEW_MAX - 1)}…` : raw
+  return last.authorId === 'me' ? `Вы: ${clipped}` : clipped
+}
+
 function mapMessage(m, myId, friendId) {
   const isMine = m.fromUserId === myId
   return {
@@ -79,6 +96,97 @@ export default function Chat() {
     }
   }, [selectedId, user?.id])
 
+  useEffect(() => {
+    if (!selectedId || !user?.id) return
+    let cancelled = false
+    let busy = false
+
+    function mergeIfChanged(prev, friendId, mapped) {
+      const cur = prev[friendId] || []
+      const lastCur = cur[cur.length - 1]?.id
+      const lastNew = mapped[mapped.length - 1]?.id
+      if (cur.length === mapped.length && lastCur === lastNew) return prev
+      return { ...prev, [friendId]: mapped }
+    }
+
+    async function poll() {
+      if (cancelled || document.visibilityState !== 'visible' || busy) return
+      busy = true
+      try {
+        const rows = await getMessages(selectedId)
+        if (cancelled) return
+        const mapped = (rows || []).map(m => mapMessage(m, user.id, selectedId))
+        setMessagesByFriend(prev => mergeIfChanged(prev, selectedId, mapped))
+      } catch {
+        /* тихо: сеть/таймаут — не засыпаем чат ошибками при фоновом опросе */
+      } finally {
+        busy = false
+      }
+    }
+
+    const intervalId = setInterval(poll, CHAT_POLL_MS)
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') poll()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+
+    return () => {
+      cancelled = true
+      clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [selectedId, user?.id])
+
+  useEffect(() => {
+    if (!user?.id || friends.length === 0) return
+    let cancelled = false
+    let busy = false
+
+    async function pollOthers() {
+      if (cancelled || document.visibilityState !== 'visible' || busy) return
+      const ids = friends
+        .map(f => f.id)
+        .filter(id => id !== selectedId)
+        .slice(0, CHAT_SIDEBAR_POLL_MAX_FRIENDS)
+      if (ids.length === 0) return
+      busy = true
+      try {
+        const results = await Promise.all(ids.map(id => getMessages(id).catch(() => [])))
+        if (cancelled) return
+        setMessagesByFriend(prev => {
+          const next = { ...prev }
+          let changed = false
+          ids.forEach((fid, i) => {
+            const mapped = (results[i] || []).map(m => mapMessage(m, user.id, fid))
+            const cur = next[fid] || []
+            const lastCur = cur[cur.length - 1]?.id
+            const lastNew = mapped[mapped.length - 1]?.id
+            if (cur.length !== mapped.length || lastCur !== lastNew) {
+              next[fid] = mapped
+              changed = true
+            }
+          })
+          return changed ? next : prev
+        })
+      } finally {
+        busy = false
+      }
+    }
+
+    const intervalId = setInterval(pollOthers, CHAT_SIDEBAR_POLL_MS)
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') pollOthers()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    pollOthers()
+
+    return () => {
+      cancelled = true
+      clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [friends, selectedId, user?.id])
+
   const selected = friends.find(f => f.id === selectedId)
 
   useEffect(() => {
@@ -138,12 +246,12 @@ export default function Chat() {
         <div
           className={`chat-list-panel ${selectedId && mobileThread ? 'chat-panel-hidden-mobile' : ''}`}
         >
-          <div className="section-title" style={{ padding: '0 4px 8px' }}>
-            Диалоги
-          </div>
+          <div className="section-title chat-list-section-title">Диалоги</div>
           {friends.map(f => {
             const msgs = messagesByFriend[f.id] || []
             const last = msgs[msgs.length - 1]
+            const preview = last ? chatListPreviewLine(last) : ''
+            const previewTitle = last?.text?.trim() ? last.text.trim() : undefined
             return (
               <button
                 key={f.id}
@@ -157,8 +265,8 @@ export default function Chat() {
                     <span className="chat-list-name">{f.name}</span>
                     {last && <span className="chat-list-time">{last.time}</span>}
                   </div>
-                  <div className="chat-list-preview">
-                    {last ? last.text : 'Написать первой…'}
+                  <div className="chat-list-preview" title={previewTitle}>
+                    {preview || 'Написать первой…'}
                   </div>
                 </div>
                 <div className={f.isOnline ? 'online' : 'offline'} title={f.isOnline ? 'онлайн' : 'офлайн'} />

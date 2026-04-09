@@ -7,6 +7,7 @@ import {
   completeHabit,
   uncompleteHabit,
 } from '../api/habitsApi'
+import { localDateISO } from '../utils/dateLocal'
 
 const HabitsContext = createContext(null)
 
@@ -52,14 +53,12 @@ export function HabitsProvider({ children }) {
   }
 
   async function complete(id) {
-    const today = new Date().toISOString().split('T')[0]
-    await completeHabit(id, today)
+    await completeHabit(id, localDateISO())
     await load({ silent: true })
   }
 
   async function uncomplete(id) {
-    const today = new Date().toISOString().split('T')[0]
-    await uncompleteHabit(id, today)
+    await uncompleteHabit(id, localDateISO())
     await load({ silent: true })
   }
 
