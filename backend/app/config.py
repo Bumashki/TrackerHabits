@@ -15,7 +15,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    database_url: str = "sqlite:///./data/app.db"
+    database_url: str = "postgresql://my_user:password1@194.67.66.112:5432/production"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     default_user_id: UUID = UUID("00000000-0000-0000-0000-000000000001")
     jwt_secret_key: str = "change-me-in-production-use-long-random-string"

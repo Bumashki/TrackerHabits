@@ -293,36 +293,70 @@ def ensure_missing_columns(engine) -> None:
             _try_add_column(engine, dialect_name, qtbl, table.name, column, dialect)
 
 
-def ensure_tables_from_models(engine) -> None:
-    """Создаёт все таблицы по моделям, если их ещё нет (пустая БД / первый запуск).
+def _db_bootstrap_log_target() -> str:
+    """Куда реально подключаемся (без пароля) — чтобы отловить неверный DATABASE_URL на сервере."""
+    try:
+        u = make_url(settings.database_url)
+        host = u.host or ""
+        port = f":{u.port}" if u.port else ""
+        db = u.database or ""
+        user = u.username or ""
+        return f"{u.drivername} {user}@{host}{port}/{db}"
+    except Exception:
+        return "(не удалось разобрать DATABASE_URL)"
 
-    На PostgreSQL после create_all проверяем наличие public.users; при сбое — повтор.
+
+def ensure_tables_from_models(engine) -> None:
+    """Создаёт таблицы по моделям (пошагово), если их ещё нет.
+
+    Раньше использовался только create_all — на части окружений PostgreSQL это не отрабатывало
+    как ожидалось; явный table.create + search_path=public даёт предсказуемое поведение.
     """
     import app.models  # noqa: F401 — регистрация таблиц в Base.metadata
 
-    for attempt in (1, 2):
+    names = sorted(Base.metadata.tables.keys())
+    if not names:
+        raise RuntimeError(
+            "В Base.metadata нет таблиц — классы ORM не привязаны к app.database.Base. "
+            "Проверьте, что приложение импортирует app.models при старте."
+        )
+
+    logger.info("DB bootstrap: %s | таблицы в метаданных (%d): %s", _db_bootstrap_log_target(), len(names), names)
+
+    if _is_postgres_url(settings.database_url):
         try:
-            Base.metadata.create_all(bind=engine)
+            with engine.begin() as conn:
+                conn.execute(text("CREATE SCHEMA IF NOT EXISTS public"))
+        except Exception as e:
+            logger.warning("CREATE SCHEMA IF NOT EXISTS public: %s", e)
+
+    for table in Base.metadata.sorted_tables:
+        try:
+            table.create(bind=engine, checkfirst=True)
+            logger.info("DB: таблица OK: %s", table.name)
         except Exception:
-            logger.exception("ensure_tables_from_models: create_all (попытка %s)", attempt)
+            logger.exception("DB: ошибка CREATE для таблицы %s", table.name)
             raise
 
-        if not _is_postgres_url(settings.database_url):
-            return
+    if not _is_postgres_url(settings.database_url):
+        return
 
-        if inspect(engine).has_table("users", schema="public"):
-            if attempt > 1:
-                logger.info("PostgreSQL: таблицы созданы со второй попытки.")
-            return
+    insp = inspect(engine)
+    if insp.has_table("users", schema="public"):
+        return
 
-        if attempt == 1:
-            logger.warning(
-                "PostgreSQL: после create_all нет public.users — повторяем create_all"
+    with engine.connect() as conn:
+        rows = conn.execute(
+            text(
+                "SELECT schemaname, tablename FROM pg_tables "
+                "WHERE schemaname NOT IN ('pg_catalog','information_schema') ORDER BY 1, 2"
             )
-
+        ).fetchall()
+    logger.error("PostgreSQL: public.users нет после CREATE. pg_tables=%s", rows)
     raise RuntimeError(
-        "PostgreSQL: таблицы не созданы. Проверьте права пользователя БД (CREATE в схеме "
-        "public), корректность DATABASE_URL и логи ошибок выше."
+        "Не удалось создать таблицы в PostgreSQL (нет public.users). "
+        "Проверьте права: GRANT CREATE ON SCHEMA public TO текущий_пользователь; "
+        "и что DATABASE_URL указывает на нужную базу (см. лог DB bootstrap выше)."
     )
 
 
@@ -331,6 +365,9 @@ if settings.database_url.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
     raw = settings.database_url.removeprefix("sqlite:///")
     Path(raw).parent.mkdir(parents=True, exist_ok=True)
+elif _is_postgres_url(settings.database_url):
+    # Явный search_path — таблицы должны попадать в public, иначе has_table(..., "public") не видит их.
+    connect_args = {"options": "-c search_path=public"}
 
 engine = create_engine(
     settings.database_url,
